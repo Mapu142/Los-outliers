@@ -1,0 +1,19 @@
+"Variant","n_indicadores_con_datos","n_indicadores_completos"
+"Accelerated ABR decline",54,1
+"Accelerated ABR decline with rec",54,1
+"Constant fertility",54,1
+"Constant mortality",30,1
+"High",54,1
+"Instant replacement",54,1
+"Instant replacement zero migration",54,1
+"Low",54,1
+"Lower 80 PI",47,1
+"Lower 95 PI",47,1
+"Mean",3,3
+"Median PI",47,1
+"Momentum",54,1
+"No change",54,1
+"No fertility below age 18",54,1
+"Upper 80 PI",47,1
+"Upper 95 PI",47,1
+"Zero migration",54,1

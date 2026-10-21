@@ -2,7 +2,7 @@
 
 Guía de navegación, registro de hallazgos y plan de trabajo del proyecto. **Léela completa antes de escribir código nuevo** y actualízala al cerrar cada fase.
 
-> **Estado actual:** Fase 0 (ETL y validación) ejecutada y verificada de punta a punta. Siguiente: Paso 3 (`R/config.R` y `R/tema.R`).
+> **Estado actual:** Fase 0 completa (ETL, validación, tema visual y `DECISIONES.md`). Siguiente: Fase 1, Paso 5 (pregunta central).
 
 ---
 
@@ -22,7 +22,7 @@ Principio rector: **una pregunta central bien respondida** vale más que muchos 
 
 | Fase | Contenido | Estado |
 |---|---|---|
-| 0 | ETL, validación, parquet limpio | ✅ Ejecutada (falta Paso 3 y volcar decisiones a `DECISIONES.md`) |
+| 0 | ETL, validación, parquet limpio, tema visual | ✅ Completa |
 | 1 | Pregunta central y plan analítico | ⏳ Siguiente |
 | 2 | EDA | ⬜ |
 | 3 | Modelado e incertidumbre | ⬜ |
@@ -33,8 +33,8 @@ Principio rector: **una pregunta central bien respondida** vale más que muchos 
 **Casillas pendientes de la Fase 0:**
 - [ ] Paso 1: confirmar que la estructura de carpetas existe tal como el punto 3.
 - [x] Paso 2: script 00 ejecutado desde cero sin errores.
-- [ ] Paso 3: `R/config.R` y `R/tema.R`.
-- [ ] Paso 4: pasar la tabla de decisiones (punto 5) a `DECISIONES.md`.
+- [x] Paso 3: `R/config.R`, `R/utils_datos.R` y `R/tema.R`.
+- [x] Paso 4: `DECISIONES.md` creado (D1-D7 cerradas; D8-D11 abiertas).
 
 ---
 
@@ -149,9 +149,12 @@ Con tolerancia de 0.001, el chequeo marcaba 4,852 filas (13.6 %): era un artefac
 
 Notas:
 - El total es 12 escenarios + 5 intervalos + 1 promedio = 18 variantes, igual que el conteo de `var_tab`.
-- Los intervalos existen para **321 ubicaciones**, no para las 555. Falta confirmar cuántas son países.
+- Los intervalos existen para **321 ubicaciones** = 237 países + 84 agregados. Cubren todos los países.
 - "No change" y "Accelerated ABR decline" no aparecían en la lista de ejemplos de la guía; los nombres se usan tal como figuran en el archivo.
 - Todas son proyecciones (2024+); no hay estimaciones en este archivo.
+- **Indicadores por variante:** los escenarios traen los 54, salvo `Constant mortality` (30). Los intervalos traen 47 (faltan `NRR`, `SRB`, `DeathsMale`, `DeathsFemale`, `InfantDeaths`, `LBsurvivingAge1`, `Under5Deaths`). `Mean` trae solo `TFR`, `LExMale` y `LExFemale`.
+- **`Mean` no es igual a `Medium`:** la diferencia absoluta máxima en `TFR` es 0.274.
+- **Año 2101:** en todas las variantes solo existe `TPopulation1Jan`, igual que en Medium.
 
 ### 4.6 Instantánea de 2023 (países, medianas **no ponderadas** por población)
 
@@ -182,7 +185,7 @@ Al ser medianas entre países, cada país pesa igual sin importar su tamaño. Es
 | D5 | Agregados solo como referencia; nunca sumados con países | ✅ Cerrada | Prueba contra `World` |
 | D6 | Sin imputación. `DoublingTime` censurado cuando el crecimiento ≤ 0.5 %; no entra en PCA ni clustering; solo uso descriptivo con nota | ✅ Cerrada | Consultas de la sección 6 |
 | D7 | Tolerancia de nacimientos = 0.0011 (artefacto de punto flotante) | ✅ Cerrada | `dif_max = 0.001`, 0 fuera de 0.0011 |
-| D8 | Para OtherVariants, filtrar países por `ISO3_code`; los intervalos solo cubren 321 ubicaciones; `Mean` solo países y hasta 2100 | ⏳ Falta perfilar | Sección 8 |
+| D8 | OtherVariants: países por ISO3, análisis hasta 2100, intervalos con 47 indicadores, `Mean` no sustituye a Medium | ✅ Cerrada | Sección 10 del script 00 |
 | D9 | ¿Análisis por país (peso igual) o ponderado por población? Definirlo por tipo de pregunta | ⏳ Fase 1 | Ver 4.6 |
 | D10 | Selección de indicadores para PCA/clustering (excluir redundantes y `DoublingTime`) | ⏳ Fase 1 | Paso 6 |
 
@@ -209,7 +212,9 @@ Paquetes base: `DBI`, `duckdb`, `dplyr`, `tidyr`, `ggplot2`, `glue`, `scales`, `
 
 ---
 
-## 7. Verificaciones pendientes
+## 7. Verificaciones
+
+**Resueltas con la sección 10 del script 00:** V2 a V5 (ver 4.5 y D8). Queda V1 (revisar visualmente los gráficos).
 
 | # | Qué verificar | Por qué importa |
 |---|---|---|
@@ -349,6 +354,7 @@ Cada fase termina con un **entregable verificable** y un **criterio de cierre**.
 | Sobreinterpretar escenarios como probabilidades | Escenarios ≠ distribución | Redacción explícita en el reporte |
 | Medianas engañosas | Países pequeños pesan igual que grandes | D9: decidir ponderación |
 | Clusters inestables | Elección arbitraria de k | Silueta + remuestreo + semilla fija |
+| `font family not found in Windows font database` | Fuente no registrada en el dispositivo gráfico de Windows | `fuente_dq()` usa `"sans"` por defecto; para otra fuente, backend AGG + `options(dq.fuente = "Inter")` |
 | `invalid 'na.print' specification` | `print(df, n = Inf)` sobre `data.frame` base | Usar `ver(df)` |
 | `max()` devuelve `NA` | Hay `NA` en el vector | `max(x, na.rm = TRUE)` |
 | `object 'chk_mundo' not found` | Ejecutar un bloque sin correr antes la consulta que lo crea | Ejecutar el script de arriba hacia abajo |
