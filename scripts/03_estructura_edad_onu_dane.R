@@ -209,86 +209,29 @@ seccion("4. DANE: PROYECCIONES NACIONALES POR EDAD SIMPLE (E2)")
 
 f_dane_hist <- primero(buscar_externo("PPED-AreaSexoEdadNac-1950-2017.*\\.xlsx?$"))
 f_dane_proy <- primero(buscar_externo("PPED-AreaSexoEdadNac-2018-2070.*\\.xlsx?$"))
-
 verificar(!is.na(f_dane_hist) && !is.na(f_dane_proy),
           "Se encontraron los dos archivos del DANE (1950-2017 y 2018-2070).",
           "Faltan archivos del DANE en data/raw/externos/ (PPED-AreaSexoEdadNac-...xlsx).")
-
 cat("Hojas 1950-2017:", paste(excel_sheets(f_dane_hist), collapse = " | "), "\n")
 cat("Hojas 2018-2070:", paste(excel_sheets(f_dane_proy), collapse = " | "), "\n")
 
-# Función de lectura de precisión: ubica la tabla real y consolida nombres de columnas
-leer_dane <- function(archivo, hoja = NULL) {
-  hojas <- excel_sheets(archivo)
-  if (is.null(hoja)) {
-    idx_hoja <- grep("PobNacional", hojas, ignore.case = TRUE)
-    hoja <- if (length(idx_hoja) > 0) idx_hoja[1] else 1
-  }
-  
-  # Leer las primeras 25 filas sin asignación automática de nombres
-  cab <- read_excel(archivo, sheet = hoja, col_names = FALSE, n_max = 25, .name_repair = "minimal")
-  
-  # Buscar la fila que contenga la celda exacta 'AÑO' / 'ANO'
-  r_anio <- which(apply(cab, 1, function(r) {
-    celdas <- trimws(tolower(as.character(r[!is.na(r)])))
-    any(celdas %in% c("año", "ano", "a~no") | grepl("^a[nñ]o$", celdas))
-  }))[1]
-  
-  if (is.na(r_anio)) stop("No se encontró la fila de encabezado con la columna AÑO en ", basename(archivo))
-  
-  h1 <- as.character(cab[r_anio, ])
-  
-  # Evaluar si la fila siguiente es una subfila de encabezado (caso 2018-2070)
-  es_dos_filas <- FALSE
-  if (r_anio < nrow(cab)) {
-    h2_cand <- as.character(cab[r_anio + 1, ])
-    txt_h2 <- tolower(paste(h2_cand[!is.na(h2_cand)], collapse = " "))
-    if (grepl("hombres|mujeres|años", txt_h2)) {
-      es_dos_filas <- TRUE
-      h2 <- h2_cand
-    }
-  }
-  
-  # Leer matriz de datos completa
-  df_raw <- read_excel(archivo, sheet = hoja, skip = r_anio - 1, col_names = FALSE, .name_repair = "minimal")
-  
-  if (es_dos_filas) {
-    nomb <- ifelse(!is.na(h2) & trimws(h2) != "" & grepl("hombres|mujeres|años|[0-9]", tolower(h2)),
-                   trimws(h2), trimws(h1))
-    df <- df_raw[-c(1, 2), ]
-  } else {
-    nomb <- trimws(h1)
-    df <- df_raw[-1, ]
-  }
-  
-  # Limpieza de nombres y reemplazo de vacíos
-  nomb <- trimws(as.character(nomb))
-  idx_empty <- is.na(nomb) | nomb == ""
-  if (any(idx_empty)) {
-    nomb[idx_empty] <- paste0("COL_VACIA_", seq_len(sum(idx_empty)))
-  }
-  
-  colnames(df) <- nomb
+# Detecta la fila de encabezado (la que contiene la columna AÑO) y lee desde ahí
+leer_dane <- function(archivo, hoja = 1) {
+  cab <- read_excel(archivo, sheet = hoja, col_names = FALSE, n_max = 20,
+                    .name_repair = "minimal")
+  fila <- which(apply(cab, 1, function(r) any(grepl("^A.O$", trimws(as.character(r)),
+                                                    ignore.case = TRUE))))[1]
+  if (is.na(fila)) stop("No se encontró la fila de encabezado (columna AÑO) en ", basename(archivo))
+  df <- read_excel(archivo, sheet = hoja, skip = fila - 1, .name_repair = "minimal")
+  names(df) <- trimws(names(df))
+  attr(df, "fila_encabezado") <- fila
   df
 }
 
-# Transformación a formato largo
+# Pasa de formato ancho a largo, conserva solo Área = Total (evita triplicar)
 dane_largo <- function(df) {
-  nms <- names(df)
-  nms_clean <- trimws(tolower(nms))
-  
-  idx_anio <- which(nms_clean %in% c("año", "ano", "a~no") | grepl("^a[nñ]o$", nms_clean))[1]
-  if (is.na(idx_anio)) idx_anio <- which(grepl("a.o|ano", nms_clean))[1]
-  
-  idx_area <- which(grepl("area|rea", nms_clean))[1]
-  
-  col_anio <- nms[idx_anio]
-  col_area <- nms[idx_area]
-  
-  verificar(!is.na(col_anio) && !is.na(col_area),
-            "Columnas de AÑO y ÁREA identificadas correctamente.",
-            "No se pudieron identificar las columnas de AÑO y ÁREA.")
-  
+  col_anio <- grep("^A.O$",  names(df), ignore.case = TRUE, value = TRUE)[1]
+  col_area <- grep("^.REA",  names(df), ignore.case = TRUE, value = TRUE)[1]
   df <- df |> rename(anio = all_of(col_anio), area = all_of(col_area))
   df <- df |> filter(tolower(trimws(as.character(area))) == "total")
   
@@ -296,8 +239,8 @@ dane_largo <- function(df) {
   verificar(nrow(dup) == 0, "Una fila por año tras filtrar Área = Total.",
             paste("Años con más de una fila:", paste(dup$anio, collapse = ", ")))
   
-  # Extraer columnas por edad y sexo (Hombres_0, Hombres 0 años, Mujeres 100 y más, etc.)
-  cols_edad <- grep("^(hombres|mujeres)[ _]+[0-9]+", names(df), value = TRUE, ignore.case = TRUE)
+  # Columnas por edad: 'Hombres_0', 'Hombres 0 años', 'Hombres 1 año', 'Mujeres_100 y más'...
+  cols_edad <- grep("^(Hombres|Mujeres)[ _]+[0-9]+", names(df), value = TRUE, ignore.case = TRUE)
   verificar(length(cols_edad) >= 200,
             paste("Columnas por edad y sexo:", length(cols_edad), "(esperado: 202)."),
             paste("Solo", length(cols_edad), "columnas por edad; se esperaban ~202."), fatal = FALSE)
@@ -305,17 +248,15 @@ dane_largo <- function(df) {
   df |>
     select(anio, all_of(cols_edad)) |>
     pivot_longer(-anio, names_to = "col", values_to = "pob") |>
-    mutate(sexo = if_else(grepl("^hombres", col, ignore.case = TRUE), "H", "M"),
+    mutate(sexo = if_else(grepl("^Hombres", col, ignore.case = TRUE), "H", "M"),
            edad = as.integer(sub("^[A-Za-z]+[ _]+([0-9]+).*$", "\\1", col)),
            anio = as.integer(anio),
            pob  = suppressWarnings(as.numeric(pob))) |>
     select(anio, sexo, edad, pob)
 }
 
-# Lectura y procesamiento de ambas series
 dane_h <- dane_largo(leer_dane(f_dane_hist))
 dane_p <- dane_largo(leer_dane(f_dane_proy))
-
 verificar(!anyNA(dane_h$pob) && !anyNA(dane_p$pob),
           "Poblaciones numéricas sin faltantes en ambos archivos.",
           "Hay valores no numéricos en las columnas por edad.")
@@ -352,7 +293,6 @@ dane_ind <- dane |>
     mediana_calc   = mediana_edad(edad, pob), .groups = "drop") |>
   mutate(psr65 = pob_15_64 / pob_65p,
          psr60 = pob_15_59 / pob_60p)
-
 saveRDS(dane_ind, file.path(CFG$dir_clean, "dane_estructura_edad.rds"))
 
 
@@ -375,20 +315,17 @@ calc <- dane_ind |>
             edad_media = edad_media_x05, edad_media_alt = edad_media_x,
             pob_total = pob_total)
 
-calc_largo <- calc |> select(-edad_media_alt) |>
-  pivot_longer(-anio, names_to = "indicador", values_to = "calculado")
-calc_alt <- calc |> transmute(anio, indicador = "edad_media", calculado_alt = edad_media_alt)
-
 chk_cp <- cp |>
-  filter(serie == "post") |>
-  inner_join(calc_largo, by = c("indicador", "anio")) |>
-  left_join(calc_alt,   by = c("indicador", "anio")) |>
-  mutate(dif = abs(calculado - valor),
-         # edad media: se acepta la convención (x o x+0.5) que mejor coincida
-         dif = if_else(indicador == "edad_media" & !is.na(calculado_alt),
-                       pmin(dif, abs(calculado_alt - valor)), dif),
-         dif = if_else(tipo_tol == "rel", dif / valor, dif),
-         ok  = dif <= tolerancia) |>
+  filter(serie == "post", indicador %in% setdiff(names(calc), c("anio", "edad_media_alt"))) |>
+  left_join(calc, by = c("anio")) |>
+  rowwise() |>
+  mutate(calculado = get(indicador),
+         calculado_alt = if (indicador == "edad_media") edad_media_alt else NA_real_,
+         dif = if (indicador == "edad_media") min(abs(calculado - valor), abs(calculado_alt - valor))
+         else abs(calculado - valor),
+         dif = if (tipo_tol == "rel") dif / valor else dif,
+         ok = dif <= tolerancia) |>
+  ungroup() |>
   select(indicador, anio, valor_pdf = valor, calculado, dif, tolerancia, ok)
 
 ver(chk_cp |> mutate(across(c(calculado, dif), ~ round(.x, 3))))

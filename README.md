@@ -2,7 +2,7 @@
 
 Guía de navegación, registro de hallazgos y plan de trabajo del proyecto. **Léela completa antes de escribir código nuevo** y actualízala al cerrar cada fase.
 
-> **Estado actual:** Fase 0 completa. Fase 1 en curso: pregunta central y plan analítico en [`PLAN_ANALITICO.md`](PLAN_ANALITICO.md); decisiones D9-D18 propuestas en `DECISIONES.md`. Siguiente: ejecutar `scripts/03_estructura_edad_onu_dane.R` (estructura por edad de la ONU y del DANE; soporte demográfico de Colombia). Falta descargar el archivo de población por edad de la ONU al 1 de julio 2024-2100.
+> **Estado actual:** Fase 0 completa. Fase 1 en curso: pregunta central y plan analítico en [`PLAN_ANALITICO.md`](PLAN_ANALITICO.md); decisiones D9-D18 propuestas en `DECISIONES.md`. Siguiente: ejecutar `scripts/03b_diagnostico_edad_onu.R` para cerrar dos alertas del script 03 (suma por edades y mediana de la ONU) e identificar la versión del Excel del DANE.
 
 ---
 

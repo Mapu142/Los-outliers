@@ -31,7 +31,7 @@ Vínculo con las guías de la ASA (2022): este registro cumple B1 (comunicar fue
 | D17 | Migración: no se excluye; se cuantifica con `Zero migration` y se hace análisis de sensibilidad sin los países dependientes de ella | 🟡 Propuesta refinada | 2026-10-20 |
 | D18 | Soporte demográfico en dos definiciones: PSR65 = 15-64 / 65+ y PSR60 = 15-59 / 60+ (fuente externa); umbrales 3.0 y 2.5 como escenarios | 🟡 Propuesta | 2026-10-20 |
 | D19 | Estructura por edad con fecha de referencia 1 de julio (igual que `TPopulation1July`, `MedianAgePop` y el DANE, 30 de junio) | 🟡 Propuesta | 2026-10-20 |
-| D20 | DANE como fuente secundaria: solo serie nacional, Área = Total, versión post-COVID verificada con puntos de control; el PDF es documentación, no dato | 🟡 Propuesta | 2026-10-20 |
+| D20 | DANE como fuente secundaria: solo serie nacional, Área = Total; el PDF identifica la base, no es verdad para los años proyectados | 🟡 Propuesta (versión por identificar) | 2026-10-20 |
 | D21 | COVID-19 (2020-2021) como choque estructural en la validación de pronósticos | 🟡 Propuesta | 2026-10-20 |
 
 ---
@@ -246,7 +246,7 @@ Estas decisiones salen de `PLAN_ANALITICO.md` y de los scripts 01 y 02. Estado �
 **Validación.** La suma por edades debe reproducir `TPopulation1July` (o `TPopulation1Jan`) de la tabla maestra, y la mediana calculada debe reproducir `MedianAgePop`.
 
 ### D20 · DANE como fuente secundaria
-**Propuesta.** Se usa la serie nacional por edad simple (1950-2017 y 2018-2070), filtrada a Área Geográfica = Total (sin ese filtro la población se triplica: Cabecera + Rural + Total). Para empalmar, el año 2018 se toma de la serie 2018-2070 (base censo 2018). La versión se acepta solo si reproduce los puntos de control del PDF del DANE (marzo de 2023, actualización posterior a la pandemia): 2035 con 55,990,158 personas, y las estructuras por edad de 2035 y 2050.
+**Propuesta.** Se usa la serie nacional por edad simple (1950-2017 y 2018-2070), filtrada a Área Geográfica = Total (sin ese filtro la población se triplica: Cabecera + Rural + Total). Para empalmar, el año 2018 se toma de la serie 2018-2070 (base censo 2018). Los puntos de control del PDF (marzo de 2023) sirven para **identificar la versión**: el tramo histórico (1950-2017) debe coincidir, lo que confirma la misma base censal; el tramo proyectado puede diferir si el DANE publicó una revisión posterior. La versión usada se registra con fecha en `FUENTES.md`.
 **Cautelas.** El PDF es de marzo de 2023: el DANE puede haber publicado revisiones. La "edad media" del DANE es el promedio, no la mediana de la ONU; se comparan medianas calculadas con la misma fórmula en ambas fuentes. Las curvas "WPP" que aparecen en el PDF corresponden a una revisión anterior de la ONU y no se reutilizan.
 
 ### D21 · COVID-19 en la validación
@@ -275,6 +275,48 @@ Las etiquetas siguen el orden normal en fecundidad y esperanza de vida, pero est
 | 2100 | -0.30 | de -4.4 a +23.0 | 54 de 161 |
 
 La migración es irrelevante para Colombia (0.21 años en 2050; 0 en 2100) pero **domina** la edad mediana de varios países (Emiratos Árabes Unidos +23.0, Qatar +18.6, Kuwait +18.0, Bahréin +14.6, Arabia Saudita +12.4, Omán +12.2, Canadá +9.4, Australia +7.7 en 2100). Esos países se agruparían por su migración, no por su envejecimiento natural. Propuesta: el clustering se repite sin los países con |dif| > 2 años como análisis de sensibilidad y se prefieren indicadores poco dependientes de la migración (`TFR`, `LE60`).
+
+---
+
+### Resultados del script 03 (2026-10-20)
+
+**Población por edad de la ONU.** Se usó la fecha 1 de julio (los cuatro archivos estaban completos): 237 países, 1950-2100, edades 0-100, 3,614,487 filas. Dos validaciones **fallaron y están en diagnóstico** (script 03b):
+- La suma por edades difiere de `TPopulation1July` hasta **2.22 %** (se esperaba menos de 0.01 %).
+- La mediana calculada excede a `MedianAgePop` en promedio **1.00 año** (máximo 1.52). En Colombia la diferencia es aproximadamente +1.0 en todos los años (32.6 frente a 31.6 en 2023).
+
+Hasta cerrar ese diagnóstico, **las cifras de soporte demográfico (PSR) de la ONU son provisionales**.
+
+**Puntos de control del DANE: 17 de 38.**
+
+| Tramo | Resultado |
+|---|---|
+| Retroproyección 1950-2017 | Reproduce el PDF (60-79 hasta 2010 y 80+ hasta 2030, dentro de 0.15 puntos) |
+| Proyección 2018-2070 | Diverge y la diferencia crece con el horizonte |
+
+Ejemplos: población de 2035 = 55,476,504 frente a 55,990,158 del PDF (-0.9 %); 60+ en 2050 = 24.6 % frente a 25.9 %; 0-14 en 2050 = 13.6 % frente a 14.8 %. Conclusión provisional: el Excel comparte base con el PDF pero **no es la misma versión proyectada**. Falta identificar la fecha y versión del Excel con la hoja "Índice" y la página de descarga del DANE (script 03b, sección C).
+
+**Comparación ONU frente a DANE, Colombia (provisional).**
+
+| Año | Población ONU | Población DANE | DANE frente a ONU |
+|---|---|---|---|
+| 1950 | 11.77 M | 13.57 M | +15.3 % |
+| 2000 | 39.09 M | 39.14 M | +0.1 % |
+| 2023 | 52.32 M | 52.12 M | -0.4 % |
+| 2050 | 59.39 M | 55.65 M | -6.3 % |
+| 2070 | 57.13 M | 50.59 M | -11.4 % |
+
+Las reconstrucciones históricas difieren mucho antes de 1985 (+15 % en 1950): **propuesta D22**, limitar la comparación ONU frente a DANE a 2000-2070.
+
+**Años de cruce de umbrales (racha de 3 años; provisional).**
+
+| Definición | Umbral | ONU | DANE |
+|---|---|---|---|
+| 15-64 / 65+ | 3.0 | 2052 | 2058 |
+| 15-64 / 65+ | 2.5 | 2058 | 2064 |
+| 15-59 / 60+ | 3.0 | 2038 | 2043 |
+| 15-59 / 60+ | 2.5 | 2045 | 2051 |
+
+La ONU cruza cada umbral entre 5 y 7 años antes que el DANE. Cualquier lectura sobre qué fuente "envejece más rápido" queda **suspendida** hasta cerrar el diagnóstico de la población por edad de la ONU. En el mundo, 168 de 237 países cruzan PSR65 < 3.0 entre 2023 y 2100.
 
 ---
 
