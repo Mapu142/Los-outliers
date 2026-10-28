@@ -1,0 +1,60 @@
+indicador,anio,serie,valor,tolerancia,tipo_tol,unidad,fuente,nota
+pct_0_14,2035,post,18.1,0.15,abs,%,Estructura de las proyecciones Pre/Post COVID-19,
+pct_15_59,2035,post,62.7,0.15,abs,%,Estructura de las proyecciones Pre/Post COVID-19,
+pct_60p,2035,post,19.2,0.15,abs,%,Estructura de las proyecciones Pre/Post COVID-19,
+edad_media,2035,post,38.3,0.20,abs,años,Estructura de las proyecciones Pre/Post COVID-19,Edad media (promedio); NO es la mediana
+indice_envejecimiento,2035,post,106.3,0.60,abs,adultos mayores por 100 menores de 15,Estructura de las proyecciones Pre/Post COVID-19,60+ / 0-14 x 100
+pct_0_14,2050,post,14.8,0.15,abs,%,Estructura de las proyecciones Pre/Post COVID-19,
+pct_15_59,2050,post,59.3,0.15,abs,%,Estructura de las proyecciones Pre/Post COVID-19,
+pct_60p,2050,post,25.9,0.15,abs,%,Estructura de las proyecciones Pre/Post COVID-19,
+edad_media,2050,post,42.9,0.20,abs,años,Estructura de las proyecciones Pre/Post COVID-19,Edad media (promedio); NO es la mediana
+indice_envejecimiento,2050,post,175.3,0.60,abs,adultos mayores por 100 menores de 15,Estructura de las proyecciones Pre/Post COVID-19,60+ / 0-14 x 100
+pct_0_14,2035,pre,18.9,0.15,abs,%,Estructura de las proyecciones Pre/Post COVID-19,Serie anterior a la pandemia (solo documentación)
+pct_15_59,2035,pre,62.0,0.15,abs,%,Estructura de las proyecciones Pre/Post COVID-19,Serie anterior a la pandemia (solo documentación)
+pct_60p,2035,pre,19.1,0.15,abs,%,Estructura de las proyecciones Pre/Post COVID-19,Serie anterior a la pandemia (solo documentación)
+edad_media,2035,pre,38.0,0.20,abs,años,Estructura de las proyecciones Pre/Post COVID-19,Serie anterior a la pandemia (solo documentación)
+pct_0_14,2050,pre,15.8,0.15,abs,%,Estructura de las proyecciones Pre/Post COVID-19,Serie anterior a la pandemia (solo documentación)
+pct_15_59,2050,pre,59.5,0.15,abs,%,Estructura de las proyecciones Pre/Post COVID-19,Serie anterior a la pandemia (solo documentación)
+pct_60p,2050,pre,24.7,0.15,abs,%,Estructura de las proyecciones Pre/Post COVID-19,Serie anterior a la pandemia (solo documentación)
+edad_media,2050,pre,41.9,0.20,abs,años,Estructura de las proyecciones Pre/Post COVID-19,Serie anterior a la pandemia (solo documentación)
+pct_60_79,1950,post,4.7,0.15,abs,%,Porcentaje 60-79 y 80+ 1950-2070,
+pct_60_79,1960,post,4.9,0.15,abs,%,Porcentaje 60-79 y 80+ 1950-2070,
+pct_60_79,1970,post,5.2,0.15,abs,%,Porcentaje 60-79 y 80+ 1950-2070,
+pct_60_79,1980,post,5.4,0.15,abs,%,Porcentaje 60-79 y 80+ 1950-2070,
+pct_60_79,1990,post,6.1,0.15,abs,%,Porcentaje 60-79 y 80+ 1950-2070,
+pct_60_79,2000,post,7.1,0.15,abs,%,Porcentaje 60-79 y 80+ 1950-2070,
+pct_60_79,2010,post,8.7,0.15,abs,%,Porcentaje 60-79 y 80+ 1950-2070,
+pct_60_79,2020,post,11.6,0.15,abs,%,Porcentaje 60-79 y 80+ 1950-2070,
+pct_60_79,2030,post,14.8,0.15,abs,%,Porcentaje 60-79 y 80+ 1950-2070,
+pct_60_79,2040,post,17.2,0.15,abs,%,Porcentaje 60-79 y 80+ 1950-2070,
+pct_60_79,2050,post,20.1,0.15,abs,%,Porcentaje 60-79 y 80+ 1950-2070,
+pct_60_79,2060,post,24.4,0.15,abs,%,Porcentaje 60-79 y 80+ 1950-2070,
+pct_60_79,2070,post,26.3,0.15,abs,%,Porcentaje 60-79 y 80+ 1950-2070,
+pct_80p,1950,post,0.7,0.15,abs,%,Porcentaje 60-79 y 80+ 1950-2070,
+pct_80p,1960,post,0.4,0.15,abs,%,Porcentaje 60-79 y 80+ 1950-2070,
+pct_80p,1970,post,0.5,0.15,abs,%,Porcentaje 60-79 y 80+ 1950-2070,
+pct_80p,1980,post,0.8,0.15,abs,%,Porcentaje 60-79 y 80+ 1950-2070,
+pct_80p,1990,post,1.0,0.15,abs,%,Porcentaje 60-79 y 80+ 1950-2070,
+pct_80p,2000,post,1.0,0.15,abs,%,Porcentaje 60-79 y 80+ 1950-2070,
+pct_80p,2010,post,1.6,0.15,abs,%,Porcentaje 60-79 y 80+ 1950-2070,
+pct_80p,2020,post,2.0,0.15,abs,%,Porcentaje 60-79 y 80+ 1950-2070,
+pct_80p,2030,post,2.6,0.15,abs,%,Porcentaje 60-79 y 80+ 1950-2070,
+pct_80p,2040,post,4.0,0.15,abs,%,Porcentaje 60-79 y 80+ 1950-2070,
+pct_80p,2050,post,5.8,0.15,abs,%,Porcentaje 60-79 y 80+ 1950-2070,
+pct_80p,2060,post,7.3,0.15,abs,%,Porcentaje 60-79 y 80+ 1950-2070,
+pct_80p,2070,post,9.7,0.15,abs,%,Porcentaje 60-79 y 80+ 1950-2070,
+pob_total,2035,post,55990158,0.001,rel,personas,Tendencia de la proyección de población,Texto explícito: 55.990.158 en la serie ajustada por COVID-19
+pob_total,2035,pre,57804147,0.001,rel,personas,Tendencia de la proyección de población,Serie anterior a la pandemia (solo documentación)
+pob_total,2051,post,57714371,0.005,rel,personas,Tendencia de la proyección de población,Asignación de la etiqueta leída en el gráfico: verificar. El texto dice que el crecimiento negativo inicia en 2051
+pob_base_2018,2018,base,48258494,0.001,rel,personas,Población base del CNPV 2018,Población ajustada por cobertura censal
+tfr,1990,post,2.96,0.05,abs,hijos por mujer,TGF Pre/Post COVID-19 1990-2070,No se reproduce con la tabla de edades; para contraste con WPP
+tfr,2010,post,2.12,0.05,abs,hijos por mujer,TGF Pre/Post COVID-19 1990-2070,No se reproduce con la tabla de edades; para contraste con WPP
+tfr,2030,post,1.59,0.05,abs,hijos por mujer,TGF Pre/Post COVID-19 1990-2070,No se reproduce con la tabla de edades; para contraste con WPP
+tfr,2050,post,1.47,0.05,abs,hijos por mujer,TGF Pre/Post COVID-19 1990-2070,No se reproduce con la tabla de edades; para contraste con WPP
+tfr,2070,post,1.43,0.05,abs,hijos por mujer,TGF Pre/Post COVID-19 1990-2070,No se reproduce con la tabla de edades; para contraste con WPP
+tfr,2030,pre,1.70,0.05,abs,hijos por mujer,TGF Pre/Post COVID-19 1990-2070,Serie anterior a la pandemia (solo documentación)
+tfr,2050,pre,1.57,0.05,abs,hijos por mujer,TGF Pre/Post COVID-19 1990-2070,Serie anterior a la pandemia (solo documentación)
+tfr,2070,pre,1.57,0.05,abs,hijos por mujer,TGF Pre/Post COVID-19 1990-2070,Serie anterior a la pandemia (solo documentación)
+defunciones_eevv,2019,observada,224332,0,abs,defunciones,Muertes registradas en Estadísticas Vitales,Estadísticas vitales (no es proyección)
+defunciones_eevv,2020,observada,300829,0,abs,defunciones,Muertes registradas en Estadísticas Vitales,Estadísticas vitales (no es proyección)
+defunciones_eevv,2021,observada,363075,0,abs,defunciones,Muertes registradas en Estadísticas Vitales,Estadísticas vitales (no es proyección)

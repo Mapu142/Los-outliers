@@ -23,13 +23,16 @@ Vínculo con las guías de la ASA (2022): este registro cumple B1 (comunicar fue
 | D9 | Peso igual por país para arquetipos; ponderado por población para cifras globales | 🟡 Propuesta | 2026-10-20 |
 | D10 | Indicadores para PCA y clustering | 🟡 Propuesta | 2026-10-20 |
 | D11 | Idioma del reporte y de las figuras finales | ⏳ Abierta | — |
-| D12 | Universo de análisis: países con población ≥ 1 millón (2023) para clustering y rankings | 🟡 Propuesta (umbral por confirmar con script 02) | 2026-10-20 |
+| D12 | Universo de análisis: países con población ≥ 1 millón (2023) para clustering y rankings (161 países) | ✅ Cerrada | 2026-10-20 |
 | D13 | Datos externos: permitidos e incentivados; registro obligatorio en `FUENTES.md` | ✅ Cerrada | 2026-10-20 |
-| D14 | Banda oficial = [mínimo, máximo] del par Lower/Upper PI, no las etiquetas | 🟡 En verificación (script 02) | 2026-10-20 |
+| D14 | Banda oficial = [mínimo, máximo] del par Lower/Upper PI, no las etiquetas | ✅ Cerrada | 2026-10-20 |
 | D15 | Transición de grupo = ≥ 5 años consecutivos en el nuevo grupo | 🟡 Propuesta | 2026-10-20 |
 | D16 | Validación por ventana móvil (5/10/20 años); discrepancia = fuera de la banda del 80 % | 🟡 Propuesta | 2026-10-20 |
-| D17 | Migración: no se excluye; se cuantifica con `Zero migration` | 🟡 Propuesta (verificar en todos los países) | 2026-10-20 |
-| D18 | Soporte demográfico PSR = pob. 15-64 / pob. 65+ (fuente externa); umbrales 3.0 y 2.5 como escenarios | 🟡 Propuesta | 2026-10-20 |
+| D17 | Migración: no se excluye; se cuantifica con `Zero migration` y se hace análisis de sensibilidad sin los países dependientes de ella | 🟡 Propuesta refinada | 2026-10-20 |
+| D18 | Soporte demográfico en dos definiciones: PSR65 = 15-64 / 65+ y PSR60 = 15-59 / 60+ (fuente externa); umbrales 3.0 y 2.5 como escenarios | 🟡 Propuesta | 2026-10-20 |
+| D19 | Estructura por edad con fecha de referencia 1 de julio (igual que `TPopulation1July`, `MedianAgePop` y el DANE, 30 de junio) | 🟡 Propuesta | 2026-10-20 |
+| D20 | DANE como fuente secundaria: solo serie nacional, Área = Total, versión post-COVID verificada con puntos de control; el PDF es documentación, no dato | 🟡 Propuesta | 2026-10-20 |
+| D21 | COVID-19 (2020-2021) como choque estructural en la validación de pronósticos | 🟡 Propuesta | 2026-10-20 |
 
 ---
 
@@ -231,6 +234,47 @@ Estas decisiones salen de `PLAN_ANALITICO.md` y de los scripts 01 y 02. Estado �
 ### D18 · Soporte demográfico
 **Propuesta.** PSR = población 15-64 / población 65+, calculado con datos externos de población por edad (los cuatro archivos entregados no la traen: el script 01 lo verificó). Umbrales de 3.0 y 2.5 declarados como escenarios, con sensibilidad a 2.0 y 4.0. Año de cruce = primera vez que queda por debajo al menos 3 años seguidos, reportado con rango entre variantes.
 **Límite.** El PSR no mide sostenibilidad fiscal de un sistema pensional.
+
+---
+
+### D18 (ampliación) · Dos definiciones de soporte
+**Propuesta.** Se calculan PSR65 (población 15-64 / 65+, definición internacional) y PSR60 (15-59 / 60+, la que usa el DANE en sus indicadores de estructura). Las edades de jubilación vigentes en Colombia (57 mujeres y 62 hombres, según prensa; confirmar con fuente oficial) quedan entre ambas definiciones, por lo que se reportan las dos y se usa la diferencia como medida de sensibilidad.
+
+### D19 · Fecha de referencia de la población por edad
+**Propuesta.** Una sola fecha para toda la serie: **1 de julio**. Coincide con `TPopulation1July`, con `MedianAgePop` y con el DANE (proyecciones a 30 de junio). Mezclar el 1 de julio de 1950-2023 con el 1 de enero de 2024-2100 introduce un desfase de medio año en el empalme.
+**Evidencia.** El equipo descargó julio 1950-2023, enero 1950-2023 y enero 2024-2100. Falta julio 2024-2100. Si no se descarga, el script 03 usa la serie completa del 1 de enero y lo advierte; esa base solo se valida contra `TPopulation1Jan`.
+**Validación.** La suma por edades debe reproducir `TPopulation1July` (o `TPopulation1Jan`) de la tabla maestra, y la mediana calculada debe reproducir `MedianAgePop`.
+
+### D20 · DANE como fuente secundaria
+**Propuesta.** Se usa la serie nacional por edad simple (1950-2017 y 2018-2070), filtrada a Área Geográfica = Total (sin ese filtro la población se triplica: Cabecera + Rural + Total). Para empalmar, el año 2018 se toma de la serie 2018-2070 (base censo 2018). La versión se acepta solo si reproduce los puntos de control del PDF del DANE (marzo de 2023, actualización posterior a la pandemia): 2035 con 55,990,158 personas, y las estructuras por edad de 2035 y 2050.
+**Cautelas.** El PDF es de marzo de 2023: el DANE puede haber publicado revisiones. La "edad media" del DANE es el promedio, no la mediana de la ONU; se comparan medianas calculadas con la misma fórmula en ambas fuentes. Las curvas "WPP" que aparecen en el PDF corresponden a una revisión anterior de la ONU y no se reutilizan.
+
+### D21 · COVID-19 en la validación
+**Propuesta.** Los años 2020-2021 son un choque, no tendencia. En la validación por ventana móvil se reporta el error con y sin esos años, o con un indicador de intervención.
+**Evidencia (DANE, estadísticas vitales).** Defunciones totales: 224,332 (2019), 300,829 (2020) y 363,075 (2021). La esperanza de vida al nacer cae a niveles cercanos a los de 2006 y se recupera desde 2023.
+
+### Resultados del script 02 (2026-10-20)
+
+**D12 · Universo.** Con umbral de 1 millón de habitantes (2023) quedan **161 países** y se excluyen 76, que suman el **0.21 %** de la población mundial. Dentro del universo, Colombia ocupa el puesto **22** en velocidad de envejecimiento (4.7 años por década; máximo anual en 2037). El ranking ya no lo dominan territorios pequeños (Puerto Rico, Hong Kong, Taiwán, Singapur y Corea encabezan).
+
+**D14 · Orden de las bandas.** Proporción de países donde "Lower 80 PI" es numéricamente menor que "Upper 80 PI":
+
+| Indicador | 2050 | 2100 |
+|---|---|---|
+| `TFR` | 1.000 | 1.000 |
+| `LEx` | 1.000 | 1.000 |
+| `MedianAgePop` | **0.034** | **0.063** |
+
+Las etiquetas siguen el orden normal en fecundidad y esperanza de vida, pero están **invertidas** en la edad mediana (menos fecundidad implica población más envejecida). Regla: la banda siempre se construye como [mínimo, máximo] del par. Además, `Medium` cae dentro de la banda del 80 % en el **96.0 %** de los país-año (n = 18,249); el 4 % restante se revisará, porque `Medium` es una proyección determinística y no la mediana probabilística.
+
+**D17 · Migración.** Diferencia en edad mediana (`Zero migration` menos `Medium`), 161 países:
+
+| Año | Mediana | Rango | Países con |dif| > 2 años |
+|---|---|---|---|
+| 2050 | -0.03 | de -3.4 a +23.6 | 37 de 161 |
+| 2100 | -0.30 | de -4.4 a +23.0 | 54 de 161 |
+
+La migración es irrelevante para Colombia (0.21 años en 2050; 0 en 2100) pero **domina** la edad mediana de varios países (Emiratos Árabes Unidos +23.0, Qatar +18.6, Kuwait +18.0, Bahréin +14.6, Arabia Saudita +12.4, Omán +12.2, Canadá +9.4, Australia +7.7 en 2100). Esos países se agruparían por su migración, no por su envejecimiento natural. Propuesta: el clustering se repite sin los países con |dif| > 2 años como análisis de sensibilidad y se prefieren indicadores poco dependientes de la migración (`TFR`, `LE60`).
 
 ---
 

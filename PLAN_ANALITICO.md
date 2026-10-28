@@ -70,8 +70,9 @@ El concurso incentiva complementar con otras fuentes. **Regla del proyecto:** to
 
 | # | Fuente | Qué aporta | Uso | Estado |
 |---|---|---|---|---|
-| E1 | ONU WPP 2024, población por edad simple y sexo (escenarios Medium, Low, High; 2024-2100) | Población 15-64 y 65+ para PSR | P3, validación cruzada de `MedianAgePop` | ✅ Existencia verificada. **Falta confirmar** el archivo histórico 1950-2023 en la página de descargas |
-| E2 | DANE, proyecciones nacionales de población 1950-2070 por sexo y edad (actualización posterior a la pandemia) | Segunda proyección oficial de Colombia | P3: ONU frente a DANE | ✅ Existencia verificada; descarga manual desde la página del DANE |
+| E1 | ONU WPP 2024, población por edad simple y sexo (escenarios Medium, Low, High; 2024-2100) | Población 15-64 y 65+ para PSR | P3, validación cruzada de `MedianAgePop` | ✅ Descargados: 1 de julio 1950-2023, 1 de enero 1950-2023 y 1 de enero 2024-2100. **Falta** el de 1 de julio 2024-2100 (D19) |
+| E2 | DANE, proyecciones nacionales de población 1950-2070 por sexo y edad (actualización posterior a la pandemia) | Segunda proyección oficial de Colombia | P3: ONU frente a DANE | ✅ Descargados y cargados (formato ancho; filtrar Área = Total). Versión por verificar con los puntos de control del PDF (D20) |
+| E2-doc | DANE, presentación "Proyecciones de población: indicadores demográficos" (marzo de 2023) | Contexto metodológico y puntos de control | Documentación, no dato (D20) | ✅ En `data/raw/externos/documentacion/` |
 | E3 | Parámetros pensionales de Colombia (edades de jubilación 57 mujeres / 62 hombres, cotización 16 %; Ley 2381 de 2024) | Contexto para los umbrales de P3 | Solo contexto y escenarios de sensibilidad | ✅ Verificado en prensa; **confirmar con fuente oficial** |
 | E4 | Informalidad laboral en Colombia (DANE, GEIH) | Límite de la lectura demográfica del soporte | Contexto en limitaciones | ⏳ Consultar serie oficial |
 | E5 | Fronteras mundiales (Natural Earth vía `rnaturalearth`) | Mapas y análisis espacial | Fase espacial (ampliación) | ⏳ Verificar licencia y campo ISO3 |
