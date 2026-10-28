@@ -24,6 +24,7 @@ if (length(faltan) > 0) install.packages(faltan)
 invisible(lapply(paquetes, library, character.only = TRUE))
 source("R/config.R",      encoding = "UTF-8")
 source("R/utils_datos.R", encoding = "UTF-8")
+source("R/utils_espacial.R", encoding = "UTF-8")
 crear_directorios()
 suppressMessages(sf::sf_use_s2(TRUE))   # geometría esférica: áreas y distancias correctas en lon/lat
 
@@ -31,8 +32,8 @@ ESCALA_NE <- 50    # 110 (muy simple), 50 (recomendada) o 10 (requiere rnaturale
 
 # Correcciones manuales de código NE -> código WPP (D22). Se llenan DESPUÉS de leer las
 # listas de la sección 4; cada entrada debe quedar justificada en DECISIONES.md.
-# Ejemplo: RECODIFICAR_NE <- c("KOS" = "XXX")
-RECODIFICAR_NE <- setNames(character(0), character(0))
+# Kosovo: Natural Earth usa KOS; WPP usa XKX (misma entidad; visto en la salida del 04).
+RECODIFICAR_NE <- c("KOS" = "XKX")
 
 con <- conectar_duckdb(if (exists("con")) con else NULL)
 dbExecute(con, glue("CREATE OR REPLACE VIEW wpp AS
@@ -87,17 +88,23 @@ if (nrow(sin_codigo) > 0) {
 }
 mundo <- mundo |> filter(!is.na(iso3), iso3 != "ATA")     # sin Antártida
 
-mundo <- sf::st_transform(mundo, 4326) |> sf::st_make_valid()
-if (any(as.character(sf::st_geometry_type(mundo)) == "GEOMETRYCOLLECTION")) {
-  mundo <- sf::st_collection_extract(mundo, "POLYGON")
-}
+mundo <- sf::st_transform(mundo, 4326)
 
 dup <- mundo |> sf::st_drop_geometry() |> count(iso3) |> filter(n > 1)
 if (nrow(dup) > 0) {
   cat("Códigos repetidos (se disuelven en un solo país):", paste(dup$iso3, collapse = ", "), "\n")
-  mundo <- mundo |> group_by(iso3) |>
-    summarise(nombre_ne = first(nombre_ne), .groups = "drop")
+  mundo <- con_s2_apagado(
+    mundo |> group_by(iso3) |> summarise(nombre_ne = first(nombre_ne), .groups = "drop"))
 }
+
+# Reparación planar + partición en el antimeridiano (D22). Con s2 activo, st_make_valid()
+# generó franjas horizontales (Rusia, Fiji) al proyectar a Equal Earth.
+mundo <- reparar_geometrias(mundo)
+amp <- amplitud_lon_partes(mundo)
+verificar(max(amp$span) < 180,
+          "Ningún polígono individual cruza el antimeridiano (amplitud máx. < 180 grados).",
+          paste("Polígonos que cruzan el antimeridiano:",
+                paste(unique(amp$iso3[amp$span >= 180]), collapse = ", ")), fatal = FALSE)
 verificar(!anyDuplicated(mundo$iso3), paste0(nrow(mundo), " polígonos con ISO3 único."),
           "Persisten ISO3 duplicados tras disolver.")
 
@@ -131,17 +138,34 @@ seccion("4. PUNTOS REPRESENTATIVOS")
 # del multipolígono completo movería el punto hacia el océano. Se toma un punto DENTRO
 # del polígono individual de mayor área.
 partes <- suppressWarnings(sf::st_cast(mundo, "POLYGON"))
-partes$area <- as.numeric(sf::st_area(partes))
-principal <- partes |> group_by(iso3) |> slice_max(area, n = 1, with_ties = FALSE) |> ungroup()
-pts <- suppressWarnings(sf::st_point_on_surface(principal))
+# Área en proyección cilíndrica de área igual (planar): evita depender de s2 (D22)
+partes$area_km2 <- as.numeric(sf::st_area(sf::st_transform(partes, "+proj=cea +lat_ts=30 +datum=WGS84"))) / 1e6
+principal <- partes |> group_by(iso3) |> slice_max(area_km2, n = 1, with_ties = FALSE) |> ungroup()
+pts <- con_s2_apagado(suppressWarnings(sf::st_point_on_surface(principal)))
 pts <- pts[, c("iso3", "nombre_ne")]
 co <- sf::st_coordinates(pts)
 pts$lon <- co[, 1]
 pts$lat <- co[, 2]
 verificar(nrow(pts) == nrow(mundo), "Un punto representativo por país.",
           "El número de puntos no coincide con el de polígonos.")
-cat("Ejemplos (Francia, Colombia, Indonesia):\n")
-ver(pts |> sf::st_drop_geometry() |> filter(iso3 %in% c("FRA", "COL", "IDN")))
+cat("Las dos partes más grandes de países con territorios dispersos (control):\n")
+ver(partes |> sf::st_drop_geometry() |> filter(iso3 %in% c("FRA", "IDN", "RUS", "USA", "NOR")) |>
+      group_by(iso3) |> slice_max(area_km2, n = 2, with_ties = FALSE) |> ungroup() |>
+      transmute(iso3, nombre_ne, area_km2 = round(area_km2)))
+
+en_caja <- function(cod, lon, lat) {
+  p <- pts[pts$iso3 == cod, ]
+  nrow(p) == 1 && p$lon >= lon[1] && p$lon <= lon[2] && p$lat >= lat[1] && p$lat <= lat[2]
+}
+verificar(en_caja("FRA", c(-5, 8.5), c(42, 51.5)),
+          "Francia: el punto cae en la Francia metropolitana (no en Córcega ni en ultramar).",
+          "Francia: el punto NO cae en la Francia metropolitana; revisar áreas de las partes.",
+          fatal = FALSE)
+verificar(en_caja("USA", c(-125, -66), c(24, 50)),
+          "Estados Unidos: el punto cae en el territorio continental.",
+          "Estados Unidos: el punto no cae en el territorio continental.", fatal = FALSE)
+cat("Nota: en Natural Earth 'countries', Reunión, Guadalupe, Martinica, Mayotte y Guayana Francesa\n",
+    "      forman parte del polígono de Francia; WPP los lista aparte (todos fuera del universo).\n", sep = "")
 
 
 # ---- 5. Guardado y registro --------------------------------------------------

@@ -32,6 +32,8 @@ suppressMessages(sf::sf_use_s2(TRUE))
 
 NSIM       <- 999L                 # permutaciones (LISA y Moran en años clave)
 NSIM_SERIE <- 199L                 # permutaciones por año en la serie 1950-2100
+NSIM_LISA  <- 4999L                # LISA: piso del valor p = 2/(NSIM_LISA+1); con pocas permutaciones
+# BH no puede declarar nada significativo (visto con k = 3)
 K_BASE     <- 5L
 K_SENS     <- c(3L, 5L, 8L)
 ALFA       <- 0.05
@@ -47,6 +49,11 @@ verificar(file.exists(F_GEOM) && file.exists(F_PTS), "Geometrías del script 04 
           "Faltan las geometrías: ejecuta primero scripts/04_espacial_geometrias.R")
 mundo <- readRDS(F_GEOM)
 pts   <- readRDS(F_PTS)
+amp <- amplitud_lon_partes(mundo)
+verificar(max(amp$span) < 180,
+          "Ningún polígono cruza el antimeridiano: sin franjas horizontales en los mapas.",
+          paste("Polígonos que cruzan el antimeridiano:", paste(unique(amp$iso3[amp$span >= 180]), collapse = ", "),
+                "-> vuelve a ejecutar scripts/04_espacial_geometrias.R (D22)."))
 
 con <- conectar_duckdb(if (exists("con")) con else NULL)
 dbExecute(con, glue("CREATE OR REPLACE VIEW wpp AS
@@ -158,7 +165,7 @@ sens <- bind_rows(lapply(K_SENS, function(k) {
   bind_rows(lapply(ANIOS_MAPA, function(a) {
     x <- MATS$edad_mediana[, as.character(a)]
     r <- moran_global(x, Wk, 499L)
-    l <- moran_local(x, nbk, 499L, ALFA)
+    l <- moran_local(x, nbk, NSIM_LISA, ALFA)
     tibble(k = k, anio = a, I = round(r$I, 3), p_perm = r$p,
            n_lisa_significativos = sum(l$grupo != "No significativo"))
   }))
@@ -208,16 +215,17 @@ guardar_fig(p_ts, "05_moran_serie_temporal", ancho = 9.5, alto = 7)
 seccion("6. LISA CON FDR (BH)")
 
 lisa_lista <- lapply(ANIOS_MAPA, function(a) {
-  r <- moran_local(MATS$edad_mediana[, as.character(a)], nb5, NSIM, ALFA)
+  r <- moran_local(MATS$edad_mediana[, as.character(a)], nb5, NSIM_LISA, ALFA)
   bind_cols(tibble(iso3 = universo_esp, variable = "edad_mediana", anio = a), r)
 })
-r_v <- moran_local(x_vel$max_gan10, nb5, NSIM, ALFA)
+r_v <- moran_local(x_vel$max_gan10, nb5, NSIM_LISA, ALFA)
 lisa <- bind_rows(lisa_lista,
                   bind_cols(tibble(iso3 = universo_esp, variable = "max_gan10_decada",
                                    anio = NA_integer_), r_v)) |>
   mutate(grupo = factor(grupo, levels = NIVELES_LISA)) |>
   left_join(nombres, by = "iso3")
 
+cat("Valor p mínimo alcanzable con ", NSIM_LISA, " permutaciones: ", 2 / (NSIM_LISA + 1), "\n", sep = "")
 cat("Conteo de grupos LISA por variable y año (BH dentro de cada familia, alfa = ", ALFA, "):\n", sep = "")
 ver(lisa |> count(variable, anio, grupo) |> pivot_wider(names_from = grupo, values_from = n,
                                                         values_fill = 0L))
@@ -245,7 +253,7 @@ p1 <- mapa_coropletico(mundo_p, m_anios, "edad_mediana", "Edad mediana (años)",
                        "El envejecimiento avanza, pero no al mismo ritmo en todo el mundo",
                        "Edad mediana de la población, 237 países y áreas.",
                        CAP, resaltar = col_p, facetas = "panel", etiquetas = fmt_num(1))
-print(p1); guardar_fig(p1, "05_mapa_edad_mediana", ancho = 9, alto = 12)
+print(p1); guardar_fig(p1, "05_mapa_edad_mediana", ancho = 8, alto = 13.5)
 
 # 7.2 Fecundidad
 p2 <- mapa_coropletico(mundo_p, m_anios, "tfr", "Hijos por mujer (TFR)",
@@ -253,7 +261,7 @@ p2 <- mapa_coropletico(mundo_p, m_anios, "tfr", "Hijos por mujer (TFR)",
                        paste0("Nivel de reemplazo = ", format(CFG$tfr_reemplazo, decimal.mark = CFG$sep_decimal),
                               " hijos por mujer."),
                        CAP, resaltar = col_p, facetas = "panel", etiquetas = fmt_num(0.1))
-print(p2); guardar_fig(p2, "05_mapa_tfr", ancho = 9, alto = 12)
+print(p2); guardar_fig(p2, "05_mapa_tfr", ancho = 8, alto = 13.5)
 
 # 7.3 Velocidad de envejecimiento (solo universo) y año del máximo
 m_vel <- inner_join(mundo_p, vel |> filter(iso3 %in% universo_esp), by = "iso3")
@@ -276,7 +284,7 @@ print(p4); guardar_fig(p4, "05_mapa_anio_maximo_velocidad", ancho = 9.5, alto = 
 COL_LISA <- c("Alto-Alto" = PAL$acento, "Bajo-Bajo" = PAL$okabe_ito[["azul"]],
               "Alto-Bajo" = PAL$okabe_ito[["naranja"]], "Bajo-Alto" = PAL$okabe_ito[["celeste"]],
               "No significativo" = "#B8BEC6")
-CAP_L <- paste0("Fuente: UN WPP 2024 (Medium). LISA con ", NSIM, " permutaciones, ", K_BASE,
+CAP_L <- paste0("Fuente: UN WPP 2024 (Medium). LISA con ", NSIM_LISA, " permutaciones, ", K_BASE,
                 " vecinos más cercanos y FDR (BH) = ", ALFA, " dentro de cada panel.\n",
                 "Exploratorio. Contorno negro: Colombia. Gris claro: fuera del universo.")
 lisa_edad <- lisa |> filter(variable == "edad_mediana") |>
@@ -286,7 +294,7 @@ p5 <- mapa_categorico(mundo_p, m_lisa, "grupo", COL_LISA, "Patrón local",
                       "Agrupaciones espaciales de la edad mediana",
                       "Alto-Alto: país con edad mediana alta rodeado de vecinos con edad alta (y análogo para las demás).",
                       CAP_L, resaltar = sf::st_cast(col_p, "MULTIPOLYGON"), facetas = "panel")
-print(p5); guardar_fig(p5, "05_mapa_lisa_edad_mediana", ancho = 9, alto = 12)
+print(p5); guardar_fig(p5, "05_mapa_lisa_edad_mediana", ancho = 8, alto = 13.5)
 
 m_lisa_v <- inner_join(mundo_p, lisa |> filter(variable == "max_gan10_decada") |> select(iso3, grupo),
                        by = "iso3")
@@ -306,6 +314,12 @@ cat(
   "   probablemente comparten información entre países: parte de la autocorrelación\n",
   "   proyectada puede venir del método (hipótesis, no verificada aquí).\n",
   " - LISA: BH dentro de cada mapa; no se ajusta entre mapas. Todo es exploratorio.\n",
+  " - El resultado LISA es sensible a k (con k = 3 nada sale significativo tras BH; con k = 5 y 8 sí):\n",
+  "   reportar siempre la tabla de sensibilidad. p = 0,002 en Moran global es el PISO con 999\n",
+  "   permutaciones, no un valor estimado.\n",
+  " - Moran alto (~0,7) refleja sobre todo gradientes continentales (África joven, Europa y Asia\n",
+  "   oriental envejecidas); LISA localiza dónde, pero Colombia queda en 'No significativo'.\n",
+  " - Reunión, Guadalupe, Martinica, Mayotte y Guayana Francesa no tienen polígono propio.\n",
   " - Los grupos describen patrones, no son etiquetas sobre los países (principio D6 de la ASA).\n",
   sep = "")
 

@@ -1,113 +1,129 @@
+---
+editor_options: 
+  markdown: 
+    wrap: sentence
+---
+
 # Registro de decisiones · ASA DataQuest 2026 (WPP 2024)
 
-Este documento es la **única fuente de verdad** sobre cómo se tratan los datos. Cada decisión se toma una vez, se justifica con evidencia reproducible y todo el código posterior la hereda. Si una decisión cambia, **no se borra**: se marca como *Reemplazada* y se agrega una nueva con su fecha.
+Este documento es la **única fuente de verdad** sobre cómo se tratan los datos.
+Cada decisión se toma una vez, se justifica con evidencia reproducible y todo el código posterior la hereda.
+Si una decisión cambia, **no se borra**: se marca como *Reemplazada* y se agrega una nueva con su fecha.
 
 Vínculo con las guías de la ASA (2022): este registro cumple B1 (comunicar fuentes, procesamiento y manejo de faltantes), B2 (transparencia en supuestos) y F4 (reproducibilidad).
 
 **Fecha de la Fase 0:** 2026-10-20 · **Script de evidencia:** `scripts/00_setup_exploracion_wpp2024.R` · **Parámetros:** `R/config.R`
 
----
+------------------------------------------------------------------------
 
 ## Resumen
 
-| # | Decisión | Estado | Fecha |
-|---|---|---|---|
-| D1 | País = `ISO3_code` no nulo (237 países/áreas) | ✅ Cerrada | 2026-10-20 |
-| D2 | Estimación `Time ≤ 2023`; proyección `Time ≥ 2024` | ✅ Cerrada | 2026-10-20 |
-| D3 | Análisis hasta 2100; 2101 solo trae `TPopulation1Jan` | ✅ Cerrada | 2026-10-20 |
-| D4 | Holy See sin suplemento: se excluye de análisis con `LE60` o nacimientos por sexo | ✅ Cerrada | 2026-10-20 |
-| D5 | Agregados solo como referencia; nunca se suman con países | ✅ Cerrada | 2026-10-20 |
-| D6 | Sin imputación; `DoublingTime` está censurado y no entra en modelos | ✅ Cerrada | 2026-10-20 |
-| D7 | Tolerancia de nacimientos por sexo = 0.0011 | ✅ Cerrada | 2026-10-20 |
-| D8 | Cobertura de OtherVariants para el análisis de incertidumbre | ✅ Cerrada | 2026-10-20 |
-| D9 | Peso igual por país para arquetipos; ponderado por población para cifras globales | 🟡 Propuesta | 2026-10-20 |
-| D10 | Indicadores para PCA y clustering | 🟡 Propuesta | 2026-10-20 |
-| D11 | Idioma del reporte y de las figuras finales | ⏳ Abierta | — |
-| D12 | Universo de análisis: países con población ≥ 1 millón (2023) para clustering y rankings (161 países) | ✅ Cerrada | 2026-10-20 |
-| D13 | Datos externos: permitidos e incentivados; registro obligatorio en `FUENTES.md` | ✅ Cerrada | 2026-10-20 |
-| D14 | Banda oficial = [mínimo, máximo] del par Lower/Upper PI, no las etiquetas | ✅ Cerrada | 2026-10-20 |
-| D15 | Transición de grupo = ≥ 5 años consecutivos en el nuevo grupo | 🟡 Propuesta | 2026-10-20 |
-| D16 | Validación por ventana móvil (5/10/20 años); discrepancia = fuera de la banda del 80 % | 🟡 Propuesta | 2026-10-20 |
-| D17 | Migración: no se excluye; se cuantifica con `Zero migration` y se hace análisis de sensibilidad sin los países dependientes de ella | 🟡 Propuesta refinada | 2026-10-20 |
-| D18 | Soporte demográfico en dos definiciones: PSR65 = 15-64 / 65+ y PSR60 = 15-59 / 60+ (fuente externa); umbrales 3.0 y 2.5 como escenarios | 🟡 Propuesta | 2026-10-20 |
-| D19 | Estructura por edad con fecha de referencia 1 de julio (igual que `TPopulation1July`, `MedianAgePop` y el DANE, 30 de junio) | 🟡 Propuesta | 2026-10-20 |
-| D20 | DANE como fuente secundaria: solo serie nacional, Área = Total; el PDF identifica la base, no es verdad para los años proyectados | 🟡 Propuesta (versión por identificar) | 2026-10-20 |
-| D21 | COVID-19 (2020-2021) como choque estructural en la validación de pronósticos | 🟡 Propuesta | 2026-10-20 |
+| \# | Decisión | Estado |
+|------------------------|------------------------|------------------------|
+| D9 | Peso igual por país (arquetipos y espacial); ponderado por población (cifras globales) | ✅ Cerrada |
+| D10 | Indicadores de PCA/clustering | ⏳ Fase 2 |
+| D11 | (según tu archivo) | ⏳ Abierta |
+| D12 | Universo: población ≥ 1 millón en 2023 | ✅ Cerrada |
+| D13 | Regla de fuentes externas | ✅ Cerrada |
+| D14 | Bandas PI como [mínimo, máximo] | ⏳ Confirmar con la salida del script 02 |
+| D15 | Transición de arquetipo: ≥ 5 años consecutivos | ⏳ Fase 3 |
+| D16 | "Discrepa" solo fuera de la banda del 80 % | ⏳ Fase 3 |
+| D17 | Efecto de la migración con *Zero migration* | ⏳ Confirmar con la salida del script 02 |
+| D18 | PSR65 y PSR60; umbrales 4, 3, 2.5, 2; racha de 3 años | ✅ Cerrada |
+| D19 | Población por edad de la ONU a 1 de julio | ✅ Cerrada |
+| D20 | Versiones del DANE y alcance de los puntos de control | ✅ Cerrada |
+| D21 | Desfase de +1 año en la mediana | ✅ Cerrada |
+| D22 | Geometrías: fronteras, reparación y recodificaciones | ✅ Cerrada (re-ejecutar 04 y 05) |
+| D23 | Pesos espaciales kNN, k = 5 | ✅ Cerrada |
+| D24 | Inferencia espacial: permutaciones y FDR | ✅ Cerrada |
+| D25 | Empalme del DANE en 2017/2018 | ✅ Cerrada |
 
----
+------------------------------------------------------------------------
 
 ## D1 · Definición de país
 
-**Decisión.** Un registro es un país o área si y solo si `ISO3_code` no es nulo ni vacío. No se usa `LocTypeName` para filtrar.
+**Decisión.** Un registro es un país o área si y solo si `ISO3_code` no es nulo ni vacío.
+No se usa `LocTypeName` para filtrar.
 
-**Justificación.** El campo `Location` mezcla países con agregados regionales, de ingreso y grupos ad hoc. Sumar sin filtrar duplica la población. `LocTypeName` no sirve como filtro porque 234 ubicaciones lo tienen en `NA`.
+**Justificación.** El campo `Location` mezcla países con agregados regionales, de ingreso y grupos ad hoc.
+Sumar sin filtrar duplica la población.
+`LocTypeName` no sirve como filtro porque 234 ubicaciones lo tienen en `NA`.
 
-**Alternativas descartadas.**
-- Filtrar por `LocTypeName = 'Country/Area'`: coincide hoy con ISO3 (237), pero depende de un campo que la guía advierte como inconsistente.
+**Alternativas descartadas.** - Filtrar por `LocTypeName = 'Country/Area'`: coincide hoy con ISO3 (237), pero depende de un campo que la guía advierte como inconsistente.
 - Filtrar por lista manual de nombres: frágil y no reproducible.
 
-**Evidencia.**
-- 237 ubicaciones con ISO3 + 318 agregados = 555 ubicaciones.
+**Evidencia.** - 237 ubicaciones con ISO3 + 318 agregados = 555 ubicaciones.
 - Suma de `TPopulation1July` de los 237 países frente a la fila `World`: diferencia máxima de **0.0000 %** en 1950-2100.
 - Los 237 de `Country/Area` tienen ISO3; las otras categorías tienen 0.
 
-**Impacto.** Todo análisis a nivel país parte de `medium_paises`. Incluye Holy See (237 y no 236).
+**Impacto.** Todo análisis a nivel país parte de `medium_paises`.
+Incluye Holy See (237 y no 236).
 
 **Implementación.** `SQL_ES_PAIS` en `R/utils_datos.R`; secciones 3 y 4 del script 00.
 
----
+------------------------------------------------------------------------
 
 ## D2 · Estimación frente a proyección
 
-**Decisión.** Los años hasta 2023 (`CFG$ultimo_anio_estimado`) son estimaciones; desde 2024 son proyección de la variante Medium. Toda tabla analítica lleva la columna `tipo_dato`.
+**Decisión.** Los años hasta 2023 (`CFG$ultimo_anio_estimado`) son estimaciones; desde 2024 son proyección de la variante Medium.
+Toda tabla analítica lleva la columna `tipo_dato`.
 
-**Justificación.** La documentación de la ONU y del concurso lo establece así. Mezclar ambas como si fueran observaciones sesga las conclusiones, y la proyección es un escenario, no un hecho.
+**Justificación.** La documentación de la ONU y del concurso lo establece así.
+Mezclar ambas como si fueran observaciones sesga las conclusiones, y la proyección es un escenario, no un hecho.
 
 **Alternativas descartadas.** Tratar la serie como continua sin marca.
 
 **Evidencia.** OtherVariants comienza en 2024 y solo contiene proyecciones, lo que es consistente con el corte.
 
-**Impacto.** Los gráficos muestran el corte con una zona sombreada y línea punteada (`capa_proyeccion()` en `R/tema.R`). Los modelos se ajustan sobre estimaciones y la proyección se usa como contraste.
+**Impacto.** Los gráficos muestran el corte con una zona sombreada y línea punteada (`capa_proyeccion()` en `R/tema.R`).
+Los modelos se ajustan sobre estimaciones y la proyección se usa como contraste.
 
----
+------------------------------------------------------------------------
 
 ## D3 · Año final del análisis
 
-**Decisión.** El análisis llega hasta **2100** (`CFG$ultimo_anio_analisis`). El año 2101 solo se usaría para `TPopulation1Jan`.
+**Decisión.** El análisis llega hasta **2100** (`CFG$ultimo_anio_analisis`).
+El año 2101 solo se usaría para `TPopulation1Jan`.
 
-**Justificación.** En 2101 las 237 filas de países traen únicamente `TPopulation1Jan`; los otros 53 indicadores están vacíos. `TPopulation1Jan` de 2101 equivale al cierre de 2100. Incluir 2101 introduciría faltantes artificiales en modelos, clusters y gráficos.
+**Justificación.** En 2101 las 237 filas de países traen únicamente `TPopulation1Jan`; los otros 53 indicadores están vacíos.
+`TPopulation1Jan` de 2101 equivale al cierre de 2100.
+Incluir 2101 introduciría faltantes artificiales en modelos, clusters y gráficos.
 
 **Alternativas descartadas.** Mantener 2101 y tratarlo como faltante: contamina el conteo de `NA` y complica cada modelo.
 
-**Evidencia.**
-- Indicadores con datos en 2101 (todos los 54 evaluados): solo `TPopulation1Jan` (237 filas).
+**Evidencia.** - Indicadores con datos en 2101 (todos los 54 evaluados): solo `TPopulation1Jan` (237 filas).
 - 2099 y 2100: 237 de 237 filas completas en `TPopulation1July`, `TFR`, `LEx` y `Births`.
 - La comparación con `World` da `NA` únicamente en 2101.
 - El suplemento también termina en 2100.
 
-**Impacto.** La tabla maestra tiene 237 × 151 = **35,787 filas**. Medium y suplemento cubren los mismos años.
+**Impacto.** La tabla maestra tiene 237 × 151 = **35,787 filas**.
+Medium y suplemento cubren los mismos años.
 
----
+------------------------------------------------------------------------
 
 ## D4 · Holy See y el suplemento
 
-**Decisión.** Holy See (`VAT`, LocID 336) no tiene filas en el suplemento. Se excluye de cualquier análisis que use `BirthsMale`, `BirthsFemale`, `LE60`, `LE60Male` o `LE60Female`. En los demás análisis permanece.
+**Decisión.** Holy See (`VAT`, LocID 336) no tiene filas en el suplemento.
+Se excluye de cualquier análisis que use `BirthsMale`, `BirthsFemale`, `LE60`, `LE60Male` o `LE60Female`.
+En los demás análisis permanece.
 
-**Justificación.** La documentación del suplemento lo indica: Holy See aparece en Medium pero no estaba en las descargas del portal. No se imputa, porque no hay una base razonable para ello.
+**Justificación.** La documentación del suplemento lo indica: Holy See aparece en Medium pero no estaba en las descargas del portal.
+No se imputa, porque no hay una base razonable para ello.
 
 **Alternativas descartadas.** Imputar con la media regional (sin sustento); eliminar Holy See de todo el proyecto (pérdida innecesaria de información).
 
-**Evidencia.**
-- Países de Medium sin filas en el suplemento: únicamente Holy See.
+**Evidencia.** - Países de Medium sin filas en el suplemento: únicamente Holy See.
 - Tras el `LEFT JOIN`, `LE60` es `NULL` solo para Holy See, en **151 filas** (1950-2100).
 
-**Impacto.** Los análisis con suplemento usan 236 países; el resto, 237. Debe indicarse en cada figura o tabla donde aplique.
+**Impacto.** Los análisis con suplemento usan 236 países; el resto, 237.
+Debe indicarse en cada figura o tabla donde aplique.
 
----
+------------------------------------------------------------------------
 
 ## D5 · Agregados regionales
 
-**Decisión.** Las 318 filas de agregados (regiones, grupos de ingreso, mundo, etc.) se usan solo como referencia de contraste y para validar totales. Nunca se suman ni se promedian junto con países.
+**Decisión.** Las 318 filas de agregados (regiones, grupos de ingreso, mundo, etc.) se usan solo como referencia de contraste y para validar totales.
+Nunca se suman ni se promedian junto con países.
 
 **Justificación.** Cada agregado ya contiene a los países que lo componen; combinarlos duplica el peso de esos países.
 
@@ -115,72 +131,77 @@ Vínculo con las guías de la ASA (2022): este registro cumple B1 (comunicar fue
 
 **Impacto.** El reporte y la app distinguen explícitamente "país" de "agregado".
 
----
+------------------------------------------------------------------------
 
 ## D6 · Faltantes y `DoublingTime`
 
-**Decisión.** No se imputa ningún valor. `DoublingTime` presenta **censura estructural** y se trata así:
-- No entra en PCA, clustering ni modelos.
+**Decisión.** No se imputa ningún valor.
+`DoublingTime` presenta **censura estructural** y se trata así: - No entra en PCA, clustering ni modelos.
 - Su información útil está contenida en `PopGrowthRate`.
 - En gráficos descriptivos se muestra solo donde existe, con una nota explícita.
 
-**Justificación.** Tras recortar a 2100, **52 de 54 indicadores están completos** para los 237 países. `DoublingTime` es el único con `NA` (15,938 filas, 44.5 %), y esos `NA` no son aleatorios: el indicador no existe cuando el crecimiento anual es ≤ 0.5 %. Una población que no crece (o crece muy poco) no tiene un tiempo de duplicación razonable. Imputarlo inventaría valores inexistentes y usar solo las filas completas sesgaría la muestra hacia países en crecimiento.
+**Justificación.** Tras recortar a 2100, **52 de 54 indicadores están completos** para los 237 países.
+`DoublingTime` es el único con `NA` (15,938 filas, 44.5 %), y esos `NA` no son aleatorios: el indicador no existe cuando el crecimiento anual es ≤ 0.5 %.
+Una población que no crece (o crece muy poco) no tiene un tiempo de duplicación razonable.
+Imputarlo inventaría valores inexistentes y usar solo las filas completas sesgaría la muestra hacia países en crecimiento.
 
-**Alternativas descartadas.**
-- Imputar con un valor muy alto o con la media: crea datos que no existen.
+**Alternativas descartadas.** - Imputar con un valor muy alto o con la media: crea datos que no existen.
 - Eliminar las filas con `NA`: elimina casi la mitad de los registros y sesga hacia países en crecimiento.
 - Calcular `DoublingTime` propio: sustituiría la definición de la ONU sin necesidad.
 
 **Evidencia.**
 
-| Condición | Filas | `DoublingTime = NA` |
-|---|---|---|
-| Crecimiento ≤ 0 (en `medium_paises`) | 10,604 | 10,604 (100 %) |
-| Crecimiento > 0 y ≤ 0.5 | 5,334 | 5,334 (100 %) |
-| Crecimiento > 0.5 | — | 0 |
+| Condición                            | Filas  | `DoublingTime = NA` |
+|--------------------------------------|--------|---------------------|
+| Crecimiento ≤ 0 (en `medium_paises`) | 10,604 | 10,604 (100 %)      |
+| Crecimiento \> 0 y ≤ 0.5             | 5,334  | 5,334 (100 %)       |
+| Crecimiento \> 0.5                   | —      | 0                   |
 
-- Estimación: `NA` con crecimiento de 0.001 a 0.500; con dato, de 0.501 a 37.9.
-- Proyección: `NA` con crecimiento de 0.001 a 0.500; con dato, de 0.501 a 4.41.
-- Los rangos no se solapan en ninguno de los dos periodos (a la precisión de 4 decimales de esa consulta). El script 00 (sección 9) reporta el umbral exacto sin redondeo.
+-   Estimación: `NA` con crecimiento de 0.001 a 0.500; con dato, de 0.501 a 37.9.
+-   Proyección: `NA` con crecimiento de 0.001 a 0.500; con dato, de 0.501 a 4.41.
+-   Los rangos no se solapan en ninguno de los dos periodos (a la precisión de 4 decimales de esa consulta). El script 00 (sección 9) reporta el umbral exacto sin redondeo.
 
-**Impacto.** `CFG$umbral_doubling = 0.5`. No hay imputación en ninguna parte del proyecto.
+**Impacto.** `CFG$umbral_doubling = 0.5`.
+No hay imputación en ninguna parte del proyecto.
 
----
+------------------------------------------------------------------------
 
 ## D7 · Tolerancia de nacimientos por sexo
 
 **Decisión.** La tolerancia para verificar `BirthsMale + BirthsFemale = Births` es **0.0011** (`CFG$tol_births`).
 
-**Justificación.** El suplemento documenta una coincidencia "dentro de 0.001". Con ese umbral exacto, el punto flotante marca como violación a filas cuya diferencia es exactamente 0.001. No es una inconsistencia de los datos.
+**Justificación.** El suplemento documenta una coincidencia "dentro de 0.001".
+Con ese umbral exacto, el punto flotante marca como violación a filas cuya diferencia es exactamente 0.001.
+No es una inconsistencia de los datos.
 
 **Alternativas descartadas.** Mantener 0.001 y tratar las filas marcadas como errores del suplemento (diagnóstico incorrecto).
 
-**Evidencia.**
-- Con tolerancia 0.001: 4,852 de 35,636 filas (13.6 %) fuera de tolerancia.
+**Evidencia.** - Con tolerancia 0.001: 4,852 de 35,636 filas (13.6 %) fuera de tolerancia.
 - Diferencia máxima observada: **0.001**.
 - Con tolerancia 0.0011: **0** filas fuera.
 
-**Impacto.** El suplemento es coherente con `Births`. Para tasas por sexo con pocos nacimientos, usar `SRB` de Medium, como indica su documentación.
+**Impacto.** El suplemento es coherente con `Births`.
+Para tasas por sexo con pocos nacimientos, usar `SRB` de Medium, como indica su documentación.
 
----
+------------------------------------------------------------------------
 
 ## D8 · Cobertura de OtherVariants
 
-**Decisión.** Para el análisis de incertidumbre (Paso 15):
-- Los países se filtran por `ISO3_code`, igual que en Medium (D1).
+**Decisión.** Para el análisis de incertidumbre (Paso 15): - Los países se filtran por `ISO3_code`, igual que en Medium (D1).
 - El análisis llega hasta **2100**: en todas las variantes, el año 2101 solo trae `TPopulation1Jan` (D3).
 - Los **intervalos** (Lower/Upper 80 PI, Lower/Upper 95 PI, Median PI) se usan solo para los 47 indicadores que traen.
 - **`Mean` no sustituye a `Medium`**: solo trae `TFR`, `LExMale` y `LExFemale`.
 - `Constant mortality` se usa solo para los 30 indicadores que trae.
 
-**Justificación.** Las variantes no son homogéneas: no todas reportan los mismos indicadores ni las mismas ubicaciones. Asumir lo contrario produciría comparaciones con huecos silenciosos.
+**Justificación.** Las variantes no son homogéneas: no todas reportan los mismos indicadores ni las mismas ubicaciones.
+Asumir lo contrario produciría comparaciones con huecos silenciosos.
 
 **Alternativas descartadas.** Usar `Mean` como proxy de Medium (no coincide); incluir 2101 (incompleto).
 
 **Evidencia.**
 
 | Hecho | Resultado |
-|---|---|
+|------------------------------------|------------------------------------|
 | Países por variante | 237 en las 18 variantes |
 | Escenarios (11 de 12) | 54 indicadores con datos |
 | `Constant mortality` | 30 indicadores con datos |
@@ -190,147 +211,252 @@ Vínculo con las guías de la ASA (2022): este registro cumple B1 (comunicar fue
 | `Mean` frente a `Medium` | Diferencia absoluta máxima en `TFR`: 0.274 (no son equivalentes) |
 | 2101 en todas las variantes | Solo `TPopulation1Jan` |
 
-**Impacto.** Las medidas de incertidumbre se construyen sobre `TPopulation1July`, `TFR` y `LEx`, presentes en High, Low y los intervalos. Los indicadores ausentes de los intervalos no tendrán banda de incertidumbre y se dirá explícitamente.
+**Impacto.** Las medidas de incertidumbre se construyen sobre `TPopulation1July`, `TFR` y `LEx`, presentes en High, Low y los intervalos.
+Los indicadores ausentes de los intervalos no tendrán banda de incertidumbre y se dirá explícitamente.
 
----
+------------------------------------------------------------------------
 
 ## Decisiones propuestas tras la propuesta del equipo (pendientes de confirmación)
 
-Estas decisiones salen de `PLAN_ANALITICO.md` y de los scripts 01 y 02. Estado 🟡 = propuesta del consultor que el equipo debe confirmar o modificar. Cuando se confirmen, se cambia el estado y se añade la evidencia.
+Estas decisiones salen de `PLAN_ANALITICO.md` y de los scripts 01 y 02.
+Estado 🟡 = propuesta del consultor que el equipo debe confirmar o modificar.
+Cuando se confirmen, se cambia el estado y se añade la evidencia.
 
 ### D9 · Ponderación
+
 **Propuesta.** Peso igual por país para tipologías y clustering (la unidad de interés es el país); ponderado por población para cifras globales y comparaciones de carga demográfica mundial.
-**Justificación.** Las medianas sin ponderar (p. ej. TFR mediano 2023 = 1.95) responden a "¿cómo es el país típico?", no a "¿cómo vive la gente?". Son preguntas distintas y deben rotularse.
+**Justificación.** Las medianas sin ponderar (p. ej. TFR mediano 2023 = 1.95) responden a "¿cómo es el país típico?", no a "¿cómo vive la gente?".
+Son preguntas distintas y deben rotularse.
 
 ### D10 · Indicadores del PCA y clustering
-**Propuesta.** Candidatos: `TFR`, `LE60` (o `LEx`), `MedianAgePop`, índice vital (`Births/Deaths`, en logaritmo) y ganancia de edad mediana a 10 años. Excluir `DoublingTime` (D6) y evitar versiones por sexo del mismo indicador.
+
+**Propuesta.** Candidatos: `TFR`, `LE60` (o `LEx`), `MedianAgePop`, índice vital (`Births/Deaths`, en logaritmo) y ganancia de edad mediana a 10 años.
+Excluir `DoublingTime` (D6) y evitar versiones por sexo del mismo indicador.
 **Cierre.** Tras la matriz de correlación de la Fase 2.
 
 ### D12 · Universo de análisis
+
 **Propuesta.** Descriptivo con los 237 países y áreas; clustering, rankings y autocorrelación espacial solo con países de 1 millón de habitantes o más en 2023.
-**Evidencia.** En el ranking de velocidad de envejecimiento del script 01, los diez primeros puestos son territorios pequeños (Saint Martin 11.4 años por década en 2027, Cook Islands, Maldivas…); Colombia no aparece. Su volatilidad responde al tamaño pequeño y no a un patrón generalizable.
+**Evidencia.** En el ranking de velocidad de envejecimiento del script 01, los diez primeros puestos son territorios pequeños (Saint Martin 11.4 años por década en 2027, Cook Islands, Maldivas…); Colombia no aparece.
+Su volatilidad responde al tamaño pequeño y no a un patrón generalizable.
 **Cierre.** Con el conteo por umbral del script 02.
 
 ### D13 · Datos externos
-**Decisión.** Confirmado por el equipo: el concurso incentiva complementar con otras fuentes. Toda fuente se registra en `data/raw/externos/FUENTES.md` (URL, fecha, licencia, transformaciones) antes de usarse. Unión por `ISO3_code`; países sin correspondencia, listados.
+
+**Decisión.** Confirmado por el equipo: el concurso incentiva complementar con otras fuentes.
+Toda fuente se registra en `data/raw/externos/FUENTES.md` (URL, fecha, licencia, transformaciones) antes de usarse.
+Unión por `ISO3_code`; países sin correspondencia, listados.
 
 ### D14 · Banda oficial de incertidumbre
+
 **Propuesta.** La banda se construye como [mínimo, máximo] del par Lower/Upper de cada nivel (80 % y 95 %).
-**Evidencia.** Para la edad mediana de Colombia, "Lower 80 PI" da **mayor** edad que "Upper 80 PI" (46.2 frente a 41.5 en 2050; 59.6 frente a 47.2 en 2100). Las etiquetas no siguen el orden numérico del indicador.
-**Cierre.** Con el script 02, sección 2 (proporción de países donde Lower < Upper, por indicador).
+**Evidencia.** Para la edad mediana de Colombia, "Lower 80 PI" da **mayor** edad que "Upper 80 PI" (46.2 frente a 41.5 en 2050; 59.6 frente a 47.2 en 2100).
+Las etiquetas no siguen el orden numérico del indicador.
+**Cierre.** Con el script 02, sección 2 (proporción de países donde Lower \< Upper, por indicador).
 
 ### D15 · Regla de transición de grupo
-**Propuesta.** Un país pasa al grupo B en el primer año desde el cual permanece en B al menos 5 años consecutivos. Sensibilidad con 3 y 10. Se reporta con rango.
+
+**Propuesta.** Un país pasa al grupo B en el primer año desde el cual permanece en B al menos 5 años consecutivos.
+Sensibilidad con 3 y 10.
+Se reporta con rango.
 
 ### D16 · Validación del pronóstico y discrepancia con la ONU
-**Propuesta.** Ventana móvil dentro de 1950-2023 con horizontes de 5, 10 y 20 años, contra líneas base ingenua y de deriva. Un pronóstico propio "discrepa" de la ONU solo si cae fuera de la banda del 80 %. La extrapolación a 2100 es ilustrativa.
+
+**Propuesta.** Ventana móvil dentro de 1950-2023 con horizontes de 5, 10 y 20 años, contra líneas base ingenua y de deriva.
+Un pronóstico propio "discrepa" de la ONU solo si cae fuera de la banda del 80 %.
+La extrapolación a 2100 es ilustrativa.
 **Evidencia.** Hay 74 años de historia por país frente a 77 años a proyectar (relación 1.04); no se puede validar un horizonte de 77 años.
-**Incertidumbre oficial de referencia (Colombia, edad mediana).** Ancho del 80 %: 4.7 años (2050) y 12.4 años (2100). Ancho del 95 %: 7.6 y 21.9.
+**Incertidumbre oficial de referencia (Colombia, edad mediana).** Ancho del 80 %: 4.7 años (2050) y 12.4 años (2100).
+Ancho del 95 %: 7.6 y 21.9.
 
 ### D17 · Migración
+
 **Propuesta.** No se excluye de las variables; se cuantifica comparando `Medium` con `Zero migration`.
-**Evidencia.** Colombia, edad mediana: 43.7 frente a 43.9 en 2050; 51.8 frente a 51.8 en 2100. Falta la comparación en todos los países (script 02, sección 3).
+**Evidencia.** Colombia, edad mediana: 43.7 frente a 43.9 en 2050; 51.8 frente a 51.8 en 2100.
+Falta la comparación en todos los países (script 02, sección 3).
 
 ### D18 · Soporte demográfico
-**Propuesta.** PSR = población 15-64 / población 65+, calculado con datos externos de población por edad (los cuatro archivos entregados no la traen: el script 01 lo verificó). Umbrales de 3.0 y 2.5 declarados como escenarios, con sensibilidad a 2.0 y 4.0. Año de cruce = primera vez que queda por debajo al menos 3 años seguidos, reportado con rango entre variantes.
+
+**Propuesta.** PSR = población 15-64 / población 65+, calculado con datos externos de población por edad (los cuatro archivos entregados no la traen: el script 01 lo verificó).
+Umbrales de 3.0 y 2.5 declarados como escenarios, con sensibilidad a 2.0 y 4.0.
+Año de cruce = primera vez que queda por debajo al menos 3 años seguidos, reportado con rango entre variantes.
 **Límite.** El PSR no mide sostenibilidad fiscal de un sistema pensional.
 
----
+------------------------------------------------------------------------
 
 ### D18 (ampliación) · Dos definiciones de soporte
-**Propuesta.** Se calculan PSR65 (población 15-64 / 65+, definición internacional) y PSR60 (15-59 / 60+, la que usa el DANE en sus indicadores de estructura). Las edades de jubilación vigentes en Colombia (57 mujeres y 62 hombres, según prensa; confirmar con fuente oficial) quedan entre ambas definiciones, por lo que se reportan las dos y se usa la diferencia como medida de sensibilidad.
+
+**Propuesta.** Se calculan PSR65 (población 15-64 / 65+, definición internacional) y PSR60 (15-59 / 60+, la que usa el DANE en sus indicadores de estructura).
+Las edades de jubilación vigentes en Colombia (57 mujeres y 62 hombres, según prensa; confirmar con fuente oficial) quedan entre ambas definiciones, por lo que se reportan las dos y se usa la diferencia como medida de sensibilidad.
 
 ### D19 · Fecha de referencia de la población por edad
-**Propuesta.** Una sola fecha para toda la serie: **1 de julio**. Coincide con `TPopulation1July`, con `MedianAgePop` y con el DANE (proyecciones a 30 de junio). Mezclar el 1 de julio de 1950-2023 con el 1 de enero de 2024-2100 introduce un desfase de medio año en el empalme.
-**Evidencia.** El equipo descargó julio 1950-2023, enero 1950-2023 y enero 2024-2100. Falta julio 2024-2100. Si no se descarga, el script 03 usa la serie completa del 1 de enero y lo advierte; esa base solo se valida contra `TPopulation1Jan`.
+
+**Propuesta.** Una sola fecha para toda la serie: **1 de julio**.
+Coincide con `TPopulation1July`, con `MedianAgePop` y con el DANE (proyecciones a 30 de junio).
+Mezclar el 1 de julio de 1950-2023 con el 1 de enero de 2024-2100 introduce un desfase de medio año en el empalme.
+**Evidencia.** El equipo descargó julio 1950-2023, enero 1950-2023 y enero 2024-2100.
+Falta julio 2024-2100.
+Si no se descarga, el script 03 usa la serie completa del 1 de enero y lo advierte; esa base solo se valida contra `TPopulation1Jan`.
 **Validación.** La suma por edades debe reproducir `TPopulation1July` (o `TPopulation1Jan`) de la tabla maestra, y la mediana calculada debe reproducir `MedianAgePop`.
 
 ### D20 · DANE como fuente secundaria
-**Propuesta.** Se usa la serie nacional por edad simple (1950-2017 y 2018-2070), filtrada a Área Geográfica = Total (sin ese filtro la población se triplica: Cabecera + Rural + Total). Para empalmar, el año 2018 se toma de la serie 2018-2070 (base censo 2018). Los puntos de control del PDF (marzo de 2023) sirven para **identificar la versión**: el tramo histórico (1950-2017) debe coincidir, lo que confirma la misma base censal; el tramo proyectado puede diferir si el DANE publicó una revisión posterior. La versión usada se registra con fecha en `FUENTES.md`.
-**Cautelas.** El PDF es de marzo de 2023: el DANE puede haber publicado revisiones. La "edad media" del DANE es el promedio, no la mediana de la ONU; se comparan medianas calculadas con la misma fórmula en ambas fuentes. Las curvas "WPP" que aparecen en el PDF corresponden a una revisión anterior de la ONU y no se reutilizan.
+
+**Propuesta.** Se usa la serie nacional por edad simple (1950-2017 y 2018-2070), filtrada a Área Geográfica = Total (sin ese filtro la población se triplica: Cabecera + Rural + Total).
+Para empalmar, el año 2018 se toma de la serie 2018-2070 (base censo 2018).
+Los puntos de control del PDF (marzo de 2023) sirven para **identificar la versión**: el tramo histórico (1950-2017) debe coincidir, lo que confirma la misma base censal; el tramo proyectado puede diferir si el DANE publicó una revisión posterior.
+La versión usada se registra con fecha en `FUENTES.md`.
+**Cautelas.** El PDF es de marzo de 2023: el DANE puede haber publicado revisiones.
+La "edad media" del DANE es el promedio, no la mediana de la ONU; se comparan medianas calculadas con la misma fórmula en ambas fuentes.
+Las curvas "WPP" que aparecen en el PDF corresponden a una revisión anterior de la ONU y no se reutilizan.
 
 ### D21 · COVID-19 en la validación
-**Propuesta.** Los años 2020-2021 son un choque, no tendencia. En la validación por ventana móvil se reporta el error con y sin esos años, o con un indicador de intervención.
-**Evidencia (DANE, estadísticas vitales).** Defunciones totales: 224,332 (2019), 300,829 (2020) y 363,075 (2021). La esperanza de vida al nacer cae a niveles cercanos a los de 2006 y se recupera desde 2023.
+
+**Propuesta.** Los años 2020-2021 son un choque, no tendencia.
+En la validación por ventana móvil se reporta el error con y sin esos años, o con un indicador de intervención.
+**Evidencia (DANE, estadísticas vitales).** Defunciones totales: 224,332 (2019), 300,829 (2020) y 363,075 (2021).
+La esperanza de vida al nacer cae a niveles cercanos a los de 2006 y se recupera desde 2023.
 
 ### Resultados del script 02 (2026-10-20)
 
-**D12 · Universo.** Con umbral de 1 millón de habitantes (2023) quedan **161 países** y se excluyen 76, que suman el **0.21 %** de la población mundial. Dentro del universo, Colombia ocupa el puesto **22** en velocidad de envejecimiento (4.7 años por década; máximo anual en 2037). El ranking ya no lo dominan territorios pequeños (Puerto Rico, Hong Kong, Taiwán, Singapur y Corea encabezan).
+**D12 · Universo.** Con umbral de 1 millón de habitantes (2023) quedan **161 países** y se excluyen 76, que suman el **0.21 %** de la población mundial.
+Dentro del universo, Colombia ocupa el puesto **22** en velocidad de envejecimiento (4.7 años por década; máximo anual en 2037).
+El ranking ya no lo dominan territorios pequeños (Puerto Rico, Hong Kong, Taiwán, Singapur y Corea encabezan).
 
 **D14 · Orden de las bandas.** Proporción de países donde "Lower 80 PI" es numéricamente menor que "Upper 80 PI":
 
-| Indicador | 2050 | 2100 |
-|---|---|---|
-| `TFR` | 1.000 | 1.000 |
-| `LEx` | 1.000 | 1.000 |
+| Indicador      | 2050      | 2100      |
+|----------------|-----------|-----------|
+| `TFR`          | 1.000     | 1.000     |
+| `LEx`          | 1.000     | 1.000     |
 | `MedianAgePop` | **0.034** | **0.063** |
 
-Las etiquetas siguen el orden normal en fecundidad y esperanza de vida, pero están **invertidas** en la edad mediana (menos fecundidad implica población más envejecida). Regla: la banda siempre se construye como [mínimo, máximo] del par. Además, `Medium` cae dentro de la banda del 80 % en el **96.0 %** de los país-año (n = 18,249); el 4 % restante se revisará, porque `Medium` es una proyección determinística y no la mediana probabilística.
+Las etiquetas siguen el orden normal en fecundidad y esperanza de vida, pero están **invertidas** en la edad mediana (menos fecundidad implica población más envejecida).
+Regla: la banda siempre se construye como [mínimo, máximo] del par.
+Además, `Medium` cae dentro de la banda del 80 % en el **96.0 %** de los país-año (n = 18,249); el 4 % restante se revisará, porque `Medium` es una proyección determinística y no la mediana probabilística.
 
-**D17 · Migración.** Diferencia en edad mediana (`Zero migration` menos `Medium`), 161 países:
+**D15 · Regla de transición entre arquetipos.** Un país pasa al grupo B en el primer año desde el cual permanece en B al menos 5 años consecutivos; sensibilidad con 3 y 10.
+Se reporta con rango.
+*Alternativa descartada:* primer año en B (sensible a oscilaciones).
 
-| Año | Mediana | Rango | Países con |dif| > 2 años |
-|---|---|---|---|
-| 2050 | -0.03 | de -3.4 a +23.6 | 37 de 161 |
-| 2100 | -0.30 | de -4.4 a +23.0 | 54 de 161 |
+**D16 · Discrepancia con la ONU.** Un pronóstico propio "discrepa" solo si cae fuera de la banda del 80 % oficial.
 
-La migración es irrelevante para Colombia (0.21 años en 2050; 0 en 2100) pero **domina** la edad mediana de varios países (Emiratos Árabes Unidos +23.0, Qatar +18.6, Kuwait +18.0, Bahréin +14.6, Arabia Saudita +12.4, Omán +12.2, Canadá +9.4, Australia +7.7 en 2100). Esos países se agruparían por su migración, no por su envejecimiento natural. Propuesta: el clustering se repite sin los países con |dif| > 2 años como análisis de sensibilidad y se prefieren indicadores poco dependientes de la migración (`TFR`, `LE60`).
+**D17 · Efecto de la migración.** Se cuantifica como *Zero migration* − *Medium* sobre la edad mediana, en todo el universo.
+*Alternativa descartada:* excluir variables afectadas por migración.
+*Evidencia parcial:* en Colombia el efecto es casi nulo.
+*Pendiente:* confirmar con `02_efecto_migracion.csv`.
 
----
+**D18 · Soporte demográfico.** PSR65 = población 15-64 / 65+ (definición internacional) y PSR60 = 15-59 / 60+ (definición del DANE).
+Umbrales de referencia 4, 3, 2.5 y 2 como escenarios, no estándares.
+Año de cruce: primer año con PSR bajo el umbral durante 3 años seguidos.
+*Alternativa descartada:* un solo umbral o un solo año de cruce sin racha.
+
+------------------------------------------------------------------------
+
+## D19 · Población por edad de la ONU a 1 de julio
+
+-   **Fecha:** 2026-10-28.
+-   **Decisión:** el script 03 usa la población por edad simple a 1 de julio (la ONU entrega 1 de enero y 1 de julio).
+-   **Razón:** `TPopulation1July` y `MedianAgePop` son de 1 de julio, y el DANE publica a 30 de junio.
+-   **Evidencia:** la suma por edades reproduce `TPopulation1July`; en el universo la diferencia relativa máxima es 1.5e-5 (17 personas). El máximo global de 2.2 % corresponde a Holy See.
+-   **Alternativa descartada:** base de 1 de enero (no es comparable con las demás columnas ni con el DANE).
+-   **Pendiente:** confirmar que `FUENTES.md` registra los archivos de 1 de julio. \## D20 · Versiones del DANE y alcance de los puntos de control
+-   **Fecha:** 2026-10-28.
+-   **Decisión:** se usa el archivo 1950-2017 (actualización de marzo de 2023) y el archivo 2018-2070 (actualizado el 18 de julio de 2025). El PDF de marzo de 2023 valida solo el tramo histórico.
+-   **Evidencia:** 14 de 14 puntos de control coinciden en 1950-2017; en 2018-2070 coinciden 3 de 24. Las diferencias incluyen una población total menor (por ejemplo −0.9 % en 2035 y −3.8 % en 2051) y no van en un solo sentido en todos los indicadores. La hoja PPED del Excel dice "Actualizado el 18 de Julio de 2025".
+-   **Alternativa descartada:** exigir que el Excel proyectado reproduzca el PDF (son versiones distintas) o usar solo la versión de 2023 (no está disponible en formato Excel por edad para 2018+ en los archivos descargados).
+-   **Validación sustituta:** el script 03 compara la suma por edades con la columna Total del Excel 2018-2070.
+-   **Pendiente:** buscar los indicadores publicados con la actualización de 2025 para construir nuevos puntos de control. \## D21 · Desfase de +1 año en la mediana
+-   **Fecha:** 2026-10-28.
+-   **Decisión:** la mediana calculada a partir de la población por edad simple supera a `MedianAgePop` en 1.00 año. Para comparar ONU y DANE se usa **siempre la mediana calculada** en ambas fuentes (el desfase se cancela). Al citar el valor oficial de la ONU se usa la columna `MedianAgePop` original.
+-   **Evidencia (script 03b):** diferencia media +1.00; desviación 0.02; 99.1 % de las filas dentro de 1.0 ± 0.1; 237 países y todo el periodo; sin variación entre tramos.
+-   **Alternativa descartada:** restar 1 a la mediana calculada (no se pudo confirmar con los archivos cuál es la convención estándar; revisar la nota metodológica de la ONU). \## D22 · Geometrías, reparación y recodificaciones
+-   **Fecha:** 2026-10-28.
+-   **Decisión:**
+    1.  Fronteras de Natural Earth, *Admin 0 - Countries*, escala 1:50m (paquetes `rnaturalearth` 1.2.0 y `rnaturalearthdata` 1.0.0), sin Antártida; `AUS` se disuelve en un solo país.
+    2.  ISO3 = `iso_a3`, completado con `iso_a3_eh` y `adm0_a3` (`iso_a3` trae -99 en varios países).
+    3.  Reparación de geometrías **sin s2** y partición en el antimeridiano (`reparar_geometrias()`).
+    4.  Áreas de las partes en proyección cilíndrica de área igual (`+proj=cea`), y punto representativo dentro del polígono más grande.
+    5.  Recodificación `KOS` → `XKX` (Kosovo).
+    6.  Los departamentos de ultramar de Francia no tienen polígono propio; son parte de Francia en Natural Earth y quedan fuera del universo.
+-   **Evidencia:** primera ejecución con franja horizontal en Rusia, línea fina en Fiji y punto representativo de Francia en Córcega (9.07° E, 42.2° N). `XKX` era el único país del universo sin polígono (228 de 237 cruzan).
+-   **Causa:** probable `st_make_valid()` con s2 activo; **no confirmada**. Por eso el 04 y el 05 llevan comprobaciones.
+-   **Alternativas descartadas:** escala 1:10m (innecesaria si el universo cruza completo); centroide del multipolígono (se desplaza hacia el océano en Francia o Noruega); ocultar la franja recortando el mapa.
+-   **Pendiente:** re-ejecutar 04 y 05 y revisar los PNG. \## D23 · Pesos espaciales
+-   **Fecha:** 2026-10-28.
+-   **Decisión:** k = 5 vecinos más cercanos por distancia de círculo máximo entre puntos interiores de los polígonos más grandes; pesos estandarizados por filas; sensibilidad con k = 3 y k = 8. Los vecinos expresan cercanía, no frontera común.
+-   **Evidencia:** hay islas sin vecinos por contigüidad. Sensibilidad de LISA (499 permutaciones): k = 3 → 0 significativos; k = 5 → 72, 54 y 29; k = 8 → 83, 87 y 80 (2023, 2050 y 2100).
+-   **Alternativa descartada:** contigüidad *queen* (deja islas sin vecinos). \## D24 · Inferencia espacial
+-   **Fecha:** 2026-10-28.
+-   **Decisión:** pruebas de permutación bilaterales (999 en Moran global, 199 por año en la serie, **4999 en LISA**); corrección FDR de Benjamini-Hochberg **dentro de cada mapa** (familia = países de una variable-año); no se ajusta entre mapas. Todo se reporta como exploratorio. El valor p mínimo alcanzable es 2 / (permutaciones + 1) (0.002 con 999).
+-   **Evidencia:** con 499 permutaciones y k = 3, BH no declaró ningún LISA significativo; el moran propio coincide con `spdep::moran.test` (0.7474).
+-   **Alternativas descartadas:** valores p analíticos (supuesto de normalidad débil con n = 160); ajuste conjunto entre todos los mapas (queda como sensibilidad opcional). \## D25 · Empalme del DANE en 2017/2018
+-   **Fecha:** 2026-10-28.
+-   **Decisión:** la serie 1950-2070 del DANE mezcla dos versiones y presenta una ruptura en 2018. El análisis de soporte (P3) usa **solo 2018-2070** del DANE; el tramo 1950-2017 es contexto. No se calculan tendencias que crucen 2017/2018. La figura del script 03 marca el empalme.
+-   **Evidencia:** crecimiento de 1.26 % (2017) a 1.77 % (2018), 2.09 % y 2.28 %; PSR65 de 7.84 a 7.10; mediana de 30.0 a 29.7; diferencia de crecimiento de 0.58 pp respecto a 2016-2017.
+-   **Interpretación pendiente:** las causas (base censal de 2018, tratamiento de la migración) deben confirmarse con la metodología del DANE; no se asumen.
+-   **Alternativa descartada:** suavizar o ajustar la serie histórica (inventaría datos).
+-   **Consecuencia:** los años de cruce del PSR (2027 en adelante) no dependen del empalme.
+
+------------------------------------------------------------------------
 
 ### Resultados del script 03 (2026-10-20)
 
-**Población por edad de la ONU.** Se usó la fecha 1 de julio (los cuatro archivos estaban completos): 237 países, 1950-2100, edades 0-100, 3,614,487 filas. Dos validaciones **fallaron y están en diagnóstico** (script 03b):
-- La suma por edades difiere de `TPopulation1July` hasta **2.22 %** (se esperaba menos de 0.01 %).
-- La mediana calculada excede a `MedianAgePop` en promedio **1.00 año** (máximo 1.52). En Colombia la diferencia es aproximadamente +1.0 en todos los años (32.6 frente a 31.6 en 2023).
+**Población por edad de la ONU.** Se usó la fecha 1 de julio (los cuatro archivos estaban completos): 237 países, 1950-2100, edades 0-100, 3,614,487 filas.
+Dos validaciones **fallaron y están en diagnóstico** (script 03b): - La suma por edades difiere de `TPopulation1July` hasta **2.22 %** (se esperaba menos de 0.01 %).
+- La mediana calculada excede a `MedianAgePop` en promedio **1.00 año** (máximo 1.52).
+En Colombia la diferencia es aproximadamente +1.0 en todos los años (32.6 frente a 31.6 en 2023).
 
 Hasta cerrar ese diagnóstico, **las cifras de soporte demográfico (PSR) de la ONU son provisionales**.
 
 **Puntos de control del DANE: 17 de 38.**
 
 | Tramo | Resultado |
-|---|---|
+|------------------------------------|------------------------------------|
 | Retroproyección 1950-2017 | Reproduce el PDF (60-79 hasta 2010 y 80+ hasta 2030, dentro de 0.15 puntos) |
 | Proyección 2018-2070 | Diverge y la diferencia crece con el horizonte |
 
-Ejemplos: población de 2035 = 55,476,504 frente a 55,990,158 del PDF (-0.9 %); 60+ en 2050 = 24.6 % frente a 25.9 %; 0-14 en 2050 = 13.6 % frente a 14.8 %. Conclusión provisional: el Excel comparte base con el PDF pero **no es la misma versión proyectada**. Falta identificar la fecha y versión del Excel con la hoja "Índice" y la página de descarga del DANE (script 03b, sección C).
+Ejemplos: población de 2035 = 55,476,504 frente a 55,990,158 del PDF (-0.9 %); 60+ en 2050 = 24.6 % frente a 25.9 %; 0-14 en 2050 = 13.6 % frente a 14.8 %.
+Conclusión provisional: el Excel comparte base con el PDF pero **no es la misma versión proyectada**.
+Falta identificar la fecha y versión del Excel con la hoja "Índice" y la página de descarga del DANE (script 03b, sección C).
 
 **Comparación ONU frente a DANE, Colombia (provisional).**
 
-| Año | Población ONU | Población DANE | DANE frente a ONU |
-|---|---|---|---|
-| 1950 | 11.77 M | 13.57 M | +15.3 % |
-| 2000 | 39.09 M | 39.14 M | +0.1 % |
-| 2023 | 52.32 M | 52.12 M | -0.4 % |
-| 2050 | 59.39 M | 55.65 M | -6.3 % |
-| 2070 | 57.13 M | 50.59 M | -11.4 % |
+| Año  | Población ONU | Población DANE | DANE frente a ONU |
+|------|---------------|----------------|-------------------|
+| 1950 | 11.77 M       | 13.57 M        | +15.3 %           |
+| 2000 | 39.09 M       | 39.14 M        | +0.1 %            |
+| 2023 | 52.32 M       | 52.12 M        | -0.4 %            |
+| 2050 | 59.39 M       | 55.65 M        | -6.3 %            |
+| 2070 | 57.13 M       | 50.59 M        | -11.4 %           |
 
 Las reconstrucciones históricas difieren mucho antes de 1985 (+15 % en 1950): **propuesta D22**, limitar la comparación ONU frente a DANE a 2000-2070.
 
 **Años de cruce de umbrales (racha de 3 años; provisional).**
 
-| Definición | Umbral | ONU | DANE |
-|---|---|---|---|
-| 15-64 / 65+ | 3.0 | 2052 | 2058 |
-| 15-64 / 65+ | 2.5 | 2058 | 2064 |
-| 15-59 / 60+ | 3.0 | 2038 | 2043 |
-| 15-59 / 60+ | 2.5 | 2045 | 2051 |
+| Definición  | Umbral | ONU  | DANE |
+|-------------|--------|------|------|
+| 15-64 / 65+ | 3.0    | 2052 | 2058 |
+| 15-64 / 65+ | 2.5    | 2058 | 2064 |
+| 15-59 / 60+ | 3.0    | 2038 | 2043 |
+| 15-59 / 60+ | 2.5    | 2045 | 2051 |
 
-La ONU cruza cada umbral entre 5 y 7 años antes que el DANE. Cualquier lectura sobre qué fuente "envejece más rápido" queda **suspendida** hasta cerrar el diagnóstico de la población por edad de la ONU. En el mundo, 168 de 237 países cruzan PSR65 < 3.0 entre 2023 y 2100.
+La ONU cruza cada umbral entre 5 y 7 años antes que el DANE.
+Cualquier lectura sobre qué fuente "envejece más rápido" queda **suspendida** hasta cerrar el diagnóstico de la población por edad de la ONU.
+En el mundo, 168 de 237 países cruzan PSR65 \< 3.0 entre 2023 y 2100.
 
----
+------------------------------------------------------------------------
 
 ## Decisiones abiertas
 
-| # | Pregunta | Cuándo se cierra | Insumo |
-|---|---|---|---|
+| \# | Pregunta | Cuándo se cierra | Insumo |
+|------------------|------------------|------------------|------------------|
 | D11 | Idioma del reporte final y de las figuras (afecta separadores decimales y etiquetas). Verificar las reglas del concurso | Paso 5 | Bases del concurso |
 
----
+------------------------------------------------------------------------
 
 ## Plantilla para nuevas decisiones
 
-```
+```         
 ## Dn · Título
 
 **Decisión.**

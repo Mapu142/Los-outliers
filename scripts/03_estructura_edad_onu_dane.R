@@ -347,6 +347,18 @@ dane_largo <- function(df) {
             paste("Columnas por edad y sexo:", length(cols_edad), "(2 sexos x 101 edades)."),
             paste("Hay", length(cols_edad), "columnas por edad; se esperaban 202."), fatal = FALSE)
   
+  # Verificación INTERNA (no depende del PDF): el Excel 2018-2070 trae columnas Total,
+  # Hombres y Mujeres; la suma de las 202 edades debe reproducir "Total".
+  if (all(c("Total", "Hombres", "Mujeres") %in% names(df))) {
+    m_edad <- sapply(df[cols_edad], function(v) suppressWarnings(as.numeric(v)))
+    tot_xl <- suppressWarnings(as.numeric(df[["Total"]]))
+    dif_int <- max(abs(rowSums(m_edad) - tot_xl) / tot_xl, na.rm = TRUE)
+    verificar(dif_int < 1e-4,
+              sprintf("La suma por edades reproduce la columna Total del Excel (dif. relativa máx. %.1e).", dif_int),
+              sprintf("La suma por edades NO reproduce la columna Total del Excel (dif. %.2e): revisar lectura.", dif_int),
+              fatal = FALSE)
+  }
+  
   df |>
     mutate(across(all_of(cols_edad), ~ suppressWarnings(as.numeric(.x)))) |>
     select(anio, all_of(cols_edad)) |>
@@ -521,6 +533,7 @@ col_fuentes <- c("ONU (WPP 2024)" = PAL$okabe_ito[["azul"]],
 
 p3 <- ggplot(fig_dat, aes(anio, psr, colour = fuente)) +
   capa_proyeccion(etiquetas = FALSE) +
+  geom_vline(xintercept = 2017.5, colour = PAL$okabe_ito[["verde"]], linetype = "dotted", linewidth = 0.5) +
   geom_hline(data = umbrales_dib, aes(yintercept = umbral),
              linetype = "dotted", colour = PAL$acento, linewidth = 0.6) +
   geom_line(linewidth = 1.15, lineend = "round") +
@@ -536,7 +549,8 @@ p3 <- ggplot(fig_dat, aes(anio, psr, colour = fuente)) +
                          "la sostenibilidad fiscal de un sistema pensional."),
        x = NULL, y = "Personas en edad de trabajar por persona mayor",
        caption = paste0("Fuentes: UN WPP 2024 (población por edad simple, fecha: ", BASE,
-                        "); DANE, proyecciones nacionales ajustadas por COVID-19.")) +
+                        "); DANE, proyecciones nacionales (1950-2017: marzo de 2023; 2018-2070: julio de 2025).\n",
+                        "Línea verde punteada: empalme DANE 2017/2018, cambio de versión (D25).")) +
   theme_dataquest()
 print(p3)
 guardar_fig(p3, "03_psr_colombia_onu_dane", ancho = 11, alto = 5.6)

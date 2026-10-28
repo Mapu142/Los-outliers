@@ -9,6 +9,38 @@
 # spdep::moran.test() como verificación cruzada.
 # ==============================================================================
 
+# ---- Geometrías ---------------------------------------------------------------
+# Ejecuta una expresión con s2 apagado y restaura el estado después.
+con_s2_apagado <- function(expr) {
+  prev <- suppressMessages(sf::sf_use_s2(FALSE))
+  on.exit(suppressMessages(sf::sf_use_s2(prev)), add = TRUE)
+  force(expr)
+}
+
+# Repara geometrías SIN s2 (planar, GEOS) y parte lo que cruce el antimeridiano.
+# Motivo (D22): st_make_valid() con s2 activo puede reconstruir polígonos como Rusia o
+# Fiji de modo que cruzan los 180 grados; al proyectar aparecen como franjas horizontales.
+reparar_geometrias <- function(x) {
+  con_s2_apagado({
+    x <- sf::st_make_valid(x)
+    if (any(as.character(sf::st_geometry_type(x)) == "GEOMETRYCOLLECTION")) {
+      x <- sf::st_collection_extract(x, "POLYGON")
+    }
+    suppressWarnings(sf::st_wrap_dateline(x, options = "WRAPDATELINE=YES", quiet = TRUE))
+  })
+}
+
+# Amplitud en longitud de cada polígono individual: una parte > 180 grados indica que
+# cruza el antimeridiano (Rusia continental llega a ~160).
+amplitud_lon_partes <- function(x) {
+  p <- suppressWarnings(sf::st_cast(x, "POLYGON"))
+  g <- sf::st_geometry(p)
+  span <- vapply(seq_along(g), function(i) {
+    b <- sf::st_bbox(g[i]); as.numeric(b[["xmax"]] - b[["xmin"]])
+  }, numeric(1))
+  tibble::tibble(iso3 = p$iso3, span = span)
+}
+
 # Proyección de área igual para mapas mundiales (Equal Earth; requiere PROJ >= 7)
 CRS_MAPA <- "+proj=eqearth"
 
