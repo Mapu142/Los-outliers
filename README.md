@@ -2,7 +2,7 @@
 
 Guía de navegación, registro de hallazgos y plan de trabajo del proyecto. **Léela completa antes de escribir código nuevo** y actualízala al cerrar cada fase.
 
-> **Estado actual:** Fase 0 completa (ETL, validación, tema visual y `DECISIONES.md`). Siguiente: Fase 1, Paso 5 (pregunta central).
+> **Estado actual:** Fase 0 completa. Fase 1 en curso: pregunta central y plan analítico en [`PLAN_ANALITICO.md`](PLAN_ANALITICO.md); decisiones D9-D18 propuestas en `DECISIONES.md`. Siguiente: ejecutar `scripts/03_estructura_edad_onu_dane.R` (estructura por edad de la ONU y del DANE; soporte demográfico de Colombia). Falta descargar el archivo de población por edad de la ONU al 1 de julio 2024-2100.
 
 ---
 
@@ -23,7 +23,7 @@ Principio rector: **una pregunta central bien respondida** vale más que muchos 
 | Fase | Contenido | Estado |
 |---|---|---|
 | 0 | ETL, validación, parquet limpio, tema visual | ✅ Completa |
-| 1 | Pregunta central y plan analítico | ⏳ Siguiente |
+| 1 | Pregunta central, plan analítico y datos externos | ⏳ En curso |
 | 2 | EDA | ⬜ |
 | 3 | Modelado e incertidumbre | ⬜ |
 | 4 | Reporte Rmd | ⬜ |
@@ -51,7 +51,8 @@ proyecto-wpp2024/
 │   │   ├── WPP2024_Demographic_Indicators_Medium_csv.gz
 │   │   ├── WPP2024_Demographic_Indicators_OtherVariants_csv.gz
 │   │   ├── WPP2024_Demographic_Indicators_notes.csv
-│   │   └── WPP2024_Supplement_Births_and_LE60.csv
+│   │   ├── WPP2024_Supplement_Births_and_LE60.csv
+│   │   └── externos/                <- fuentes externas + FUENTES.md (registro obligatorio)
 │   └── clean/                     <- salidas generadas por scripts (regenerables)
 │       ├── wpp_paises_medium_suppl.parquet    <- 35,787 filas (237 países × 1950-2100)
 │       ├── diccionario_indicadores.rds
