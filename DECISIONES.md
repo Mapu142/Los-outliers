@@ -20,9 +20,16 @@ Vínculo con las guías de la ASA (2022): este registro cumple B1 (comunicar fue
 | D6 | Sin imputación; `DoublingTime` está censurado y no entra en modelos | ✅ Cerrada | 2026-10-20 |
 | D7 | Tolerancia de nacimientos por sexo = 0.0011 | ✅ Cerrada | 2026-10-20 |
 | D8 | Cobertura de OtherVariants para el análisis de incertidumbre | ✅ Cerrada | 2026-10-20 |
-| D9 | Análisis por país (peso igual) o ponderado por población | ⏳ Abierta | — |
-| D10 | Indicadores para PCA y clustering | ⏳ Abierta | — |
+| D9 | Peso igual por país para arquetipos; ponderado por población para cifras globales | 🟡 Propuesta | 2026-10-20 |
+| D10 | Indicadores para PCA y clustering | 🟡 Propuesta | 2026-10-20 |
 | D11 | Idioma del reporte y de las figuras finales | ⏳ Abierta | — |
+| D12 | Universo de análisis: países con población ≥ 1 millón (2023) para clustering y rankings | 🟡 Propuesta (umbral por confirmar con script 02) | 2026-10-20 |
+| D13 | Datos externos: permitidos e incentivados; registro obligatorio en `FUENTES.md` | ✅ Cerrada | 2026-10-20 |
+| D14 | Banda oficial = [mínimo, máximo] del par Lower/Upper PI, no las etiquetas | 🟡 En verificación (script 02) | 2026-10-20 |
+| D15 | Transición de grupo = ≥ 5 años consecutivos en el nuevo grupo | 🟡 Propuesta | 2026-10-20 |
+| D16 | Validación por ventana móvil (5/10/20 años); discrepancia = fuera de la banda del 80 % | 🟡 Propuesta | 2026-10-20 |
+| D17 | Migración: no se excluye; se cuantifica con `Zero migration` | 🟡 Propuesta (verificar en todos los países) | 2026-10-20 |
+| D18 | Soporte demográfico PSR = pob. 15-64 / pob. 65+ (fuente externa); umbrales 3.0 y 2.5 como escenarios | 🟡 Propuesta | 2026-10-20 |
 
 ---
 
@@ -184,12 +191,53 @@ Vínculo con las guías de la ASA (2022): este registro cumple B1 (comunicar fue
 
 ---
 
+## Decisiones propuestas tras la propuesta del equipo (pendientes de confirmación)
+
+Estas decisiones salen de `PLAN_ANALITICO.md` y de los scripts 01 y 02. Estado 🟡 = propuesta del consultor que el equipo debe confirmar o modificar. Cuando se confirmen, se cambia el estado y se añade la evidencia.
+
+### D9 · Ponderación
+**Propuesta.** Peso igual por país para tipologías y clustering (la unidad de interés es el país); ponderado por población para cifras globales y comparaciones de carga demográfica mundial.
+**Justificación.** Las medianas sin ponderar (p. ej. TFR mediano 2023 = 1.95) responden a "¿cómo es el país típico?", no a "¿cómo vive la gente?". Son preguntas distintas y deben rotularse.
+
+### D10 · Indicadores del PCA y clustering
+**Propuesta.** Candidatos: `TFR`, `LE60` (o `LEx`), `MedianAgePop`, índice vital (`Births/Deaths`, en logaritmo) y ganancia de edad mediana a 10 años. Excluir `DoublingTime` (D6) y evitar versiones por sexo del mismo indicador.
+**Cierre.** Tras la matriz de correlación de la Fase 2.
+
+### D12 · Universo de análisis
+**Propuesta.** Descriptivo con los 237 países y áreas; clustering, rankings y autocorrelación espacial solo con países de 1 millón de habitantes o más en 2023.
+**Evidencia.** En el ranking de velocidad de envejecimiento del script 01, los diez primeros puestos son territorios pequeños (Saint Martin 11.4 años por década en 2027, Cook Islands, Maldivas…); Colombia no aparece. Su volatilidad responde al tamaño pequeño y no a un patrón generalizable.
+**Cierre.** Con el conteo por umbral del script 02.
+
+### D13 · Datos externos
+**Decisión.** Confirmado por el equipo: el concurso incentiva complementar con otras fuentes. Toda fuente se registra en `data/raw/externos/FUENTES.md` (URL, fecha, licencia, transformaciones) antes de usarse. Unión por `ISO3_code`; países sin correspondencia, listados.
+
+### D14 · Banda oficial de incertidumbre
+**Propuesta.** La banda se construye como [mínimo, máximo] del par Lower/Upper de cada nivel (80 % y 95 %).
+**Evidencia.** Para la edad mediana de Colombia, "Lower 80 PI" da **mayor** edad que "Upper 80 PI" (46.2 frente a 41.5 en 2050; 59.6 frente a 47.2 en 2100). Las etiquetas no siguen el orden numérico del indicador.
+**Cierre.** Con el script 02, sección 2 (proporción de países donde Lower < Upper, por indicador).
+
+### D15 · Regla de transición de grupo
+**Propuesta.** Un país pasa al grupo B en el primer año desde el cual permanece en B al menos 5 años consecutivos. Sensibilidad con 3 y 10. Se reporta con rango.
+
+### D16 · Validación del pronóstico y discrepancia con la ONU
+**Propuesta.** Ventana móvil dentro de 1950-2023 con horizontes de 5, 10 y 20 años, contra líneas base ingenua y de deriva. Un pronóstico propio "discrepa" de la ONU solo si cae fuera de la banda del 80 %. La extrapolación a 2100 es ilustrativa.
+**Evidencia.** Hay 74 años de historia por país frente a 77 años a proyectar (relación 1.04); no se puede validar un horizonte de 77 años.
+**Incertidumbre oficial de referencia (Colombia, edad mediana).** Ancho del 80 %: 4.7 años (2050) y 12.4 años (2100). Ancho del 95 %: 7.6 y 21.9.
+
+### D17 · Migración
+**Propuesta.** No se excluye de las variables; se cuantifica comparando `Medium` con `Zero migration`.
+**Evidencia.** Colombia, edad mediana: 43.7 frente a 43.9 en 2050; 51.8 frente a 51.8 en 2100. Falta la comparación en todos los países (script 02, sección 3).
+
+### D18 · Soporte demográfico
+**Propuesta.** PSR = población 15-64 / población 65+, calculado con datos externos de población por edad (los cuatro archivos entregados no la traen: el script 01 lo verificó). Umbrales de 3.0 y 2.5 declarados como escenarios, con sensibilidad a 2.0 y 4.0. Año de cruce = primera vez que queda por debajo al menos 3 años seguidos, reportado con rango entre variantes.
+**Límite.** El PSR no mide sostenibilidad fiscal de un sistema pensional.
+
+---
+
 ## Decisiones abiertas
 
 | # | Pregunta | Cuándo se cierra | Insumo |
 |---|---|---|---|
-| D9 | ¿Medianas y comparaciones entre países con peso igual o ponderadas por población? Depende de la pregunta (tipologías de países: peso igual; carga demográfica mundial: ponderado) | Paso 6 | Plan analítico |
-| D10 | Selección de indicadores no redundantes para PCA y clustering (evitar `LEx` con `LExMale`/`LExFemale`, `Births` con `CBR`, y excluir `DoublingTime`) | Paso 6 | Matriz de correlación (Paso 9) |
 | D11 | Idioma del reporte final y de las figuras (afecta separadores decimales y etiquetas). Verificar las reglas del concurso | Paso 5 | Bases del concurso |
 
 ---
