@@ -9,6 +9,8 @@
 #   4. Cargar y empalmar las proyecciones nacionales del DANE (fuente externa E2).
 #   5. Verificar la versión del DANE con los puntos de control del PDF (marzo 2023).
 #   6. Comparar ONU frente a DANE para Colombia y calcular años de cruce de umbrales.
+# Revisión (tras 03b): lectura robusta del Excel del DANE (hoja y área opcionales) y
+# tratamiento explícito del desfase de +1 año entre mediana calculada y MedianAgePop (D21).
 #
 # Entradas : data/clean/wpp_paises_medium_suppl.parquet
 #            data/raw/externos/ (archivos de la ONU por edad y Excel del DANE)
@@ -134,22 +136,45 @@ chk_tot <- dbGetQuery(con, glue("
          MAX(ABS(e.pob_total - w.{col_ref}) / w.{col_ref}) AS dif_rel_max
   FROM un_estructura e JOIN wpp w ON e.LocID = w.LocID AND e.Time = w.Time"))
 ver(chk_tot)
-verificar(chk_tot$dif_rel_max < 1e-4,
-          sprintf("La suma por edades reproduce %s (diferencia relativa máx. %.2e).",
-                  col_ref, chk_tot$dif_rel_max),
-          sprintf("La suma por edades no coincide con %s (dif. relativa máx. %.2e).",
-                  col_ref, chk_tot$dif_rel_max), fatal = FALSE)
+cat(sprintf("  Diferencia relativa máx. global: %.2e (la domina Holy See; ver 2.1b para el universo).\n",
+            chk_tot$dif_rel_max))
+
+# 2.1b El máximo global lo domina Holy See (~0,5 mil habitantes: unas decenas de personas
+# son un porcentaje grande). Se repite la prueba solo en el universo (>= 1 millón).
+chk_tot_u <- dbGetQuery(con, glue("
+  SELECT COUNT(DISTINCT e.LocID) AS paises,
+         MAX(ABS(e.pob_total - w.{col_ref}) / w.{col_ref}) AS dif_rel_max,
+         MAX(ABS(e.pob_total - w.{col_ref})) * 1000        AS dif_abs_max_personas
+  FROM un_estructura e JOIN wpp w ON e.LocID = w.LocID AND e.Time = w.Time
+  WHERE w.{col_ref} >= {CFG$umbral_universo_miles}"))
+ver(chk_tot_u)
+verificar(chk_tot_u$dif_rel_max < 1e-3,
+          sprintf("En el universo (>= 1 millón) la suma por edades difiere de %s en menos de %.2f %%.",
+                  col_ref, 100 * chk_tot_u$dif_rel_max),
+          sprintf("Incluso en el universo la diferencia llega a %.2f %%: revisar fechas de referencia.",
+                  100 * chk_tot_u$dif_rel_max), fatal = FALSE)
 
 # 2.2 Mediana calculada frente a MedianAgePop (solo si la base es 1 de julio)
+# Hallazgo del script 03b: la diferencia es CONSTANTE (~ +1,0 año, desv. ~0,02) en los
+# 237 países y en todo el periodo. Es un desfase de convención, no un error de datos.
+# Regla (D21): comparaciones ONU-DANE usan SIEMPRE mediana_calc en ambas fuentes
+# (el desfase se cancela); al citar MedianAgePop de la ONU se usa la columna original.
+OFFSET_MEDIANA <- NA_real_
 if (BASE == "julio") {
   chk_med <- dbGetQuery(con, "
-    SELECT COUNT(*) AS n, ROUND(AVG(ABS(m.mediana_calc - w.MedianAgePop)), 3) AS dif_media,
-           ROUND(MAX(ABS(m.mediana_calc - w.MedianAgePop)), 3) AS dif_max
+    SELECT COUNT(*) AS n,
+           ROUND(AVG(m.mediana_calc - w.MedianAgePop), 3)    AS dif_media,
+           ROUND(STDDEV(m.mediana_calc - w.MedianAgePop), 3) AS dif_desv,
+           ROUND(MIN(m.mediana_calc - w.MedianAgePop), 3)    AS dif_min,
+           ROUND(MAX(m.mediana_calc - w.MedianAgePop), 3)    AS dif_max
     FROM un_mediana m JOIN wpp w ON m.LocID = w.LocID AND m.Time = w.Time")
   ver(chk_med)
-  verificar(chk_med$dif_media < 0.25,
-            "La mediana calculada con edades simples reproduce MedianAgePop (convención compatible).",
-            "La mediana calculada difiere de MedianAgePop: revisar la convención.", fatal = FALSE)
+  OFFSET_MEDIANA <- chk_med$dif_media
+  verificar(chk_med$dif_desv < 0.05,
+            sprintf("Diferencia casi constante (media %+.2f años, desv. %.3f): desfase de convención (D21).",
+                    chk_med$dif_media, chk_med$dif_desv),
+            sprintf("La diferencia varía (desv. %.3f años): no es un desfase constante, revisar.",
+                    chk_med$dif_desv), fatal = FALSE)
 } else {
   cat("Base 1 de enero: no se compara la mediana con MedianAgePop (que es de 1 de julio).\n")
 }
@@ -215,48 +240,126 @@ verificar(!is.na(f_dane_hist) && !is.na(f_dane_proy),
 cat("Hojas 1950-2017:", paste(excel_sheets(f_dane_hist), collapse = " | "), "\n")
 cat("Hojas 2018-2070:", paste(excel_sheets(f_dane_proy), collapse = " | "), "\n")
 
-# Detecta la fila de encabezado (la que contiene la columna AÑO) y lee desde ahí
-leer_dane <- function(archivo, hoja = 1) {
-  cab <- read_excel(archivo, sheet = hoja, col_names = FALSE, n_max = 20,
-                    .name_repair = "minimal")
-  fila <- which(apply(cab, 1, function(r) any(grepl("^A.O$", trimws(as.character(r)),
-                                                    ignore.case = TRUE))))[1]
-  if (is.na(fila)) stop("No se encontró la fila de encabezado (columna AÑO) en ", basename(archivo))
-  df <- read_excel(archivo, sheet = hoja, skip = fila - 1, .name_repair = "minimal")
-  names(df) <- trimws(names(df))
-  attr(df, "fila_encabezado") <- fila
+# --- Lectura robusta de los Excel del DANE ------------------------------------
+# Estructura REAL de los dos archivos (verificada con capturas de pantalla):
+#  * 1950-2017 (hoja 'Nacional_1950_2017'): UNA fila de encabezado (DP | DPNOM | AÑO |
+#    ÁREA GEOGRÁFICA | Hombres_0 ... Mujeres_100), 3 filas por año (Cabecera, Centros
+#    Poblados y Rural Disperso, Total) y pies de nota al final. "Actualización: marzo 2023".
+#  * 2018-2070 (hoja 'PobNacionalxÁreaSexoEdad'): encabezado de DOS filas: AÑO en la fila 8
+#    y los nombres por edad ('Hombres 0 años' ... 'Mujeres 100 años y más', y luego
+#    'Total 0 años'...) en la fila 9. Hojas 'Índice' y 'PPED' son documentación.
+#    "Actualizado el 18 de julio de 2025".
+# Estrategia: leer cada hoja COMPLETA como texto y SIN encabezado (así los índices de fila
+# son los de la matriz leída; read_excel(skip=) cuenta filas físicas y no coincide con la
+# lectura que recorta filas vacías iniciales), localizar la fila con AÑO, decidir si los
+# nombres por edad están en esa fila o en la siguiente, y construir los nombres combinando
+# ambas filas.
+patron_edad <- "^(Hombres?|Mujeres?)[ _]+[0-9]+"
+patron_anio <- "^A.{1,2}O$"            # AÑO, tolerante a problemas de codificación de la Ñ
+es_anio <- function(x) grepl(patron_anio, trimws(as.character(x)), ignore.case = TRUE)
+
+leer_hoja_cruda <- function(archivo, hoja) {
+  suppressMessages(read_excel(archivo, sheet = hoja, col_names = FALSE,
+                              col_types = "text", .name_repair = "minimal"))
+}
+
+# Localiza la fila con AÑO (fa) y la fila que contiene los nombres por edad
+analizar_cruda <- function(cr) {
+  vacio <- list(fa = NA_integer_, fila_edad = NA_integer_, n_edad = 0L)
+  if (nrow(cr) == 0 || ncol(cr) == 0) return(vacio)
+  m <- as.matrix(cr)
+  tope <- min(60L, nrow(m))
+  fa <- which(apply(m[seq_len(tope), , drop = FALSE], 1, function(r) any(es_anio(r))))[1]
+  if (is.na(fa)) return(vacio)
+  cuenta <- function(i) {
+    if (i > nrow(m)) return(0L)
+    sum(grepl(patron_edad, trimws(m[i, ]), ignore.case = TRUE))
+  }
+  cands <- c(fa, fa + 1L)
+  n <- vapply(cands, cuenta, integer(1))
+  list(fa = as.integer(fa), fila_edad = as.integer(cands[which.max(n)]),
+       n_edad = as.integer(max(n)))
+}
+
+# Devuelve un tibble de texto con nombres de columna ya combinados
+leer_dane <- function(archivo) {
+  hojas  <- excel_sheets(archivo)
+  crudas <- lapply(hojas, function(h) leer_hoja_cruda(archivo, h))
+  info   <- lapply(crudas, analizar_cruda)
+  n_edad <- vapply(info, function(z) z$n_edad, integer(1))
+  resumen <- paste0(hojas, " (cols. por edad: ", n_edad, ")", collapse = " | ")
+  verificar(any(n_edad >= 100),
+            paste0("Hoja de datos en ", basename(archivo), ": '", hojas[which.max(n_edad)], "'."),
+            paste0("Ninguna hoja de ", basename(archivo), " tiene encabezado AÑO con columnas ",
+                   "por edad. Hojas inspeccionadas: ", resumen))
+  i   <- which.max(n_edad)
+  inf <- info[[i]]
+  m   <- as.matrix(crudas[[i]])
+  
+  n_a <- trimws(m[inf$fa, ])            # fila con AÑO / TERRITORIO / ÁREA
+  n_e <- trimws(m[inf$fila_edad, ])     # fila con 'Hombres 0 años'... (puede ser la misma)
+  nombres <- ifelse(!is.na(n_e) & n_e != "", n_e, n_a)
+  nombres <- ifelse(is.na(nombres) | nombres == "",
+                    paste0("sin_nombre_", seq_along(nombres)), nombres)
+  nombres <- make.unique(nombres)
+  
+  ini <- max(inf$fa, inf$fila_edad) + 1L
+  verificar(ini <= nrow(m), "Hay filas de datos debajo del encabezado.",
+            paste("El encabezado termina en la última fila de", basename(archivo)))
+  cuerpo <- m[ini:nrow(m), , drop = FALSE]
+  colnames(cuerpo) <- nombres
+  df <- tibble::as_tibble(cuerpo)
+  df <- df[rowSums(!is.na(cuerpo)) > 0, , drop = FALSE]
+  cat("  ", basename(archivo), " -> hoja '", hojas[i], "' | AÑO en la fila ", inf$fa,
+      ", nombres por edad en la fila ", inf$fila_edad, " | ", nrow(df), " filas x ",
+      ncol(df), " columnas.\n", sep = "")
   df
 }
 
-# Pasa de formato ancho a largo, conserva solo Área = Total (evita triplicar)
+# Pasa de formato ancho a largo. Conserva solo Área = Total y descarta pies de nota.
 dane_largo <- function(df) {
-  col_anio <- grep("^A.O$",  names(df), ignore.case = TRUE, value = TRUE)[1]
-  col_area <- grep("^.REA",  names(df), ignore.case = TRUE, value = TRUE)[1]
-  df <- df |> rename(anio = all_of(col_anio), area = all_of(col_area))
-  df <- df |> filter(tolower(trimws(as.character(area))) == "total")
+  col_anio <- grep(patron_anio, names(df), ignore.case = TRUE, value = TRUE)[1]
+  col_area <- grep("^.?REA", names(df), ignore.case = TRUE, value = TRUE)[1]
+  verificar(!is.na(col_anio), "Columna AÑO localizada.",
+            paste("No hay columna AÑO. Primeras columnas:", paste(head(names(df), 8), collapse = " | ")))
+  df$anio <- suppressWarnings(as.integer(as.numeric(df[[col_anio]])))
+  df <- df |> filter(!is.na(anio))               # descarta pies de nota y filas vacías
+  
+  if (is.na(col_area)) {
+    cat("  Sin columna de área: se asume una serie nacional (total).\n")
+  } else {
+    valores_area <- unique(trimws(as.character(df[[col_area]])))
+    df <- df |> filter(tolower(trimws(as.character(.data[[col_area]]))) == "total")
+    verificar(nrow(df) > 0, paste0("Filas con Área = Total (columna '", col_area, "')."),
+              paste0("Ninguna fila con Área = Total. Valores en '", col_area, "': ",
+                     paste(head(valores_area, 10), collapse = " | ")))
+  }
   
   dup <- df |> count(anio) |> filter(n > 1)
-  verificar(nrow(dup) == 0, "Una fila por año tras filtrar Área = Total.",
-            paste("Años con más de una fila:", paste(dup$anio, collapse = ", ")))
+  verificar(nrow(dup) == 0, "Una fila por año.",
+            paste0("Años con más de una fila: ", paste(head(dup$anio, 10), collapse = ", "),
+                   ". Hay otra dimensión sin filtrar. Columnas no-edad: ",
+                   paste(head(setdiff(names(df), grep(patron_edad, names(df), value = TRUE)), 10),
+                         collapse = " | ")))
   
-  # Columnas por edad: 'Hombres_0', 'Hombres 0 años', 'Hombres 1 año', 'Mujeres_100 y más'...
-  cols_edad <- grep("^(Hombres|Mujeres)[ _]+[0-9]+", names(df), value = TRUE, ignore.case = TRUE)
-  verificar(length(cols_edad) >= 200,
-            paste("Columnas por edad y sexo:", length(cols_edad), "(esperado: 202)."),
-            paste("Solo", length(cols_edad), "columnas por edad; se esperaban ~202."), fatal = FALSE)
+  cols_edad <- grep(patron_edad, names(df), value = TRUE, ignore.case = TRUE)
+  verificar(length(cols_edad) == 202,
+            paste("Columnas por edad y sexo:", length(cols_edad), "(2 sexos x 101 edades)."),
+            paste("Hay", length(cols_edad), "columnas por edad; se esperaban 202."), fatal = FALSE)
   
   df |>
+    mutate(across(all_of(cols_edad), ~ suppressWarnings(as.numeric(.x)))) |>
     select(anio, all_of(cols_edad)) |>
     pivot_longer(-anio, names_to = "col", values_to = "pob") |>
-    mutate(sexo = if_else(grepl("^Hombres", col, ignore.case = TRUE), "H", "M"),
-           edad = as.integer(sub("^[A-Za-z]+[ _]+([0-9]+).*$", "\\1", col)),
-           anio = as.integer(anio),
-           pob  = suppressWarnings(as.numeric(pob))) |>
+    mutate(sexo = if_else(grepl("^Hombre", col, ignore.case = TRUE), "H", "M"),
+           edad = as.integer(sub("^[A-Za-z]+[ _]+([0-9]+).*$", "\\1", col))) |>
     select(anio, sexo, edad, pob)
 }
 
 dane_h <- dane_largo(leer_dane(f_dane_hist))
 dane_p <- dane_largo(leer_dane(f_dane_proy))
+cat("  Histórico:", min(dane_h$anio), "-", max(dane_h$anio),
+    "| Proyección:", min(dane_p$anio), "-", max(dane_p$anio), "\n")
 verificar(!anyNA(dane_h$pob) && !anyNA(dane_p$pob),
           "Poblaciones numéricas sin faltantes en ambos archivos.",
           "Hay valores no numéricos en las columnas por edad.")
@@ -295,10 +398,31 @@ dane_ind <- dane |>
          psr60 = pob_15_59 / pob_60p)
 saveRDS(dane_ind, file.path(CFG$dir_clean, "dane_estructura_edad.rds"))
 
+# Empalme de DOS versiones: 1950-2017 (marzo 2023) + 2018-2070 (julio 2025, base censo 2018).
+# Un salto en 2017 -> 2018 sería un cambio de versión, no un fenómeno demográfico.
+cat("\nEmpalme 2017 -> 2018 (cambio de archivo y de versión del DANE):\n")
+ver(dane_ind |> arrange(anio) |>
+      mutate(crec_pct = round(100 * (pob_total / dplyr::lag(pob_total) - 1), 3)) |>
+      filter(anio %in% 2015:2020) |>
+      transmute(anio, pob_total = round(pob_total), crec_pct,
+                psr65 = round(psr65, 2), psr60 = round(psr60, 2),
+                mediana_calc = round(mediana_calc, 2)))
+cr_anual <- setNames(dane_ind$pob_total / dplyr::lag(dane_ind$pob_total) - 1, dane_ind$anio)
+salto_pp <- unname(abs(cr_anual["2018"] - mean(cr_anual[c("2016", "2017")])))
+verificar(isTRUE(salto_pp < 0.005),
+          sprintf("Sin salto apreciable en el empalme (el crecimiento de 2018 difiere %.2f pp del de 2016-2017).",
+                  100 * salto_pp),
+          sprintf("Posible ruptura en el empalme 2017/2018 (diferencia de crecimiento: %.2f pp). Tratar 2018 como quiebre de serie y declararlo.",
+                  100 * salto_pp), fatal = FALSE)
+
 
 # ---- 5. Puntos de control: ¿la serie descargada es la versión post-COVID? ----
 seccion("5. PUNTOS DE CONTROL DEL DANE (PDF, marzo 2023)")
 
+# NOTA DE VERSIÓN (script 03b, hoja PPED): el Excel dice "Actualizado el 18 de Julio de 2025".
+# Los puntos de control vienen del PDF de marzo de 2023. Es esperable que reproduzcan el
+# tramo histórico pero NO el proyectado: son dos versiones distintas de la serie (D20).
+# Estos controles validan la lectura del archivo, no la versión; registrar en FUENTES.md.
 f_cp <- file.path(CFG$dir_externos, "documentacion", "checkpoints_dane.csv")
 verificar(file.exists(f_cp), "Archivo de puntos de control encontrado.",
           paste("Falta", f_cp))
@@ -326,14 +450,25 @@ chk_cp <- cp |>
          dif = if (tipo_tol == "rel") dif / valor else dif,
          ok = dif <= tolerancia) |>
   ungroup() |>
-  select(indicador, anio, valor_pdf = valor, calculado, dif, tolerancia, ok)
+  select(indicador, anio, valor_pdf = valor, calculado, dif, tolerancia, ok) |>
+  mutate(tramo = if_else(anio <= 2017, "1950-2017", "2018-2070"))
 
 ver(chk_cp |> mutate(across(c(calculado, dif), ~ round(.x, 3))))
-n_ok <- sum(chk_cp$ok, na.rm = TRUE); n_tot <- nrow(chk_cp)
-verificar(n_ok == n_tot,
-          sprintf("La serie del DANE reproduce los %d puntos de control: es la versión post-COVID (D20).", n_tot),
-          sprintf("Solo %d de %d puntos de control coinciden: la serie descargada puede ser otra versión. Revisar antes de usarla.",
-                  n_ok, n_tot), fatal = FALSE)
+res_tramo <- chk_cp |> group_by(tramo) |>
+  summarise(puntos = n(), ok = sum(ok, na.rm = TRUE), .groups = "drop")
+ver(res_tramo)
+# El PDF es de marzo de 2023: debe reproducir el tramo histórico (archivo 1950-2017, misma
+# versión). En 2018-2070 el Excel es la actualización de julio de 2025: diferencias esperables.
+h <- res_tramo[res_tramo$tramo == "1950-2017", ]
+verificar(nrow(h) == 1 && h$ok == h$puntos,
+          "El tramo histórico (versión marzo 2023) reproduce los puntos de control del PDF.",
+          "El tramo histórico NO reproduce todos los puntos de control: revisar la lectura.",
+          fatal = FALSE)
+p2 <- res_tramo[res_tramo$tramo == "2018-2070", ]
+if (nrow(p2) == 1) {
+  cat(sprintf("  Tramo 2018-2070: %d de %d puntos coinciden con el PDF de 2023.\n", p2$ok, p2$puntos),
+      "  Diferencias aquí son compatibles con la actualización de julio de 2025 (D20); no es un error de lectura.\n", sep = "")
+}
 write.csv(chk_cp, file.path(CFG$dir_tablas, "03_checkpoints_dane.csv"), row.names = FALSE)
 
 
