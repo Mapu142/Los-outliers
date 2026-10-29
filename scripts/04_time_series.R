@@ -8,15 +8,14 @@ if (!file.exists("R/config.R")) {
 source("R/config.R", encoding = "UTF-8")
 source("R/tema.R",   encoding = "UTF-8")
 
-suppressPackageStartupMessages({
-  library(duckdb)
-  library(DBI)
-  library(dplyr)
-  library(tidyr)
-  library(ggplot2)
-  library(forecast)
-  library(mgcv)
-})
+
+library(duckdb)
+library(DBI)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(forecast)
+library(mgcv)
 
 crear_directorios()
 set.seed(CFG$semilla)
@@ -398,7 +397,7 @@ val_pais <- bt %>%
   group_by(ISO3_code, Variable, Modelo, Origen) %>%
   summarise(MAE = mean(abs(obs - pred)), RMSE = sqrt(mean((obs - pred)^2)),
             MASE = MAE / first(escala), .groups = "drop")
-write.csv(val_pais, out("validacion_por_pais.csv"), row.names = FALSE)
+write.csv(val_pais, out("04_validacion_por_pais.csv"), row.names = FALSE)
 
 resumen_validacion <- bt %>%
   mutate(tramo = cut(h, c(0, 10, 20, Inf), labels = c("MASE_h1_10", "MASE_h11_20", "MASE_h21_mas")),
@@ -413,7 +412,7 @@ resumen_validacion <- bt %>%
 
 cat("\nValidación (mediana del error escalado; <1 = mejor que el naive de un paso):\n")
 print(as.data.frame(resumen_validacion), digits = 3)
-write.csv(resumen_validacion, out("resumen_validacion.csv"), row.names = FALSE)
+write.csv(resumen_validacion, out("04_resumen_validacion.csv"), row.names = FALSE)
 
 # 4. Pronóstico final 2024-2100 ---------------------------------------
 
@@ -459,7 +458,7 @@ proy_largo <- bind_rows(lapply(VARS, function(v) {
     lo95 = cl(as.vector(P + esc %o% b$q025)), hi95 = cl(as.vector(P + esc %o% b$q975))
   )
 }))
-saveRDS(final, file.path(CFG$dir_clean, "proyecciones_todos_los_metodos.rds"))
+saveRDS(final, file.path(CFG$dir_clean, "04_proyecciones_todos_los_metodos.rds"))
 
 # 5. Comparación contra la ONU ---------------------------------------
 
@@ -477,7 +476,7 @@ resumen_discrepancia <- comparacion %>%
             disc_abs_media = mean(abs(Discrepancia), na.rm = TRUE),
             pct_ONU_en_IC = 100 * mean(ONU_en_IC95, na.rm = TRUE), .groups = "drop")
 cat("\nDiscrepancia del método final contra la ONU:\n"); print(as.data.frame(resumen_discrepancia), digits = 3)
-write.csv(resumen_discrepancia, out("resumen_discrepancia.csv"), row.names = FALSE)
+write.csv(resumen_discrepancia, out("04_resumen_discrepancia.csv"), row.names = FALSE)
 
 # Comparación de TODOS los métodos contra la ONU (solo como chequeo de
 # razonabilidad: el método se elige por backtesting, no por parecerse a la ONU)
@@ -496,7 +495,7 @@ cmp_metodos <- bind_rows(lapply(VARS, function(v) {
   }))
 })) %>% arrange(Variable, MAE_vs_ONU)
 cat("\nDistancia a la ONU por método (menor = más parecido):\n"); print(as.data.frame(cmp_metodos), digits = 3)
-write.csv(cmp_metodos, out("comparacion_metodos_vs_ONU.csv"), row.names = FALSE)
+write.csv(cmp_metodos, out("04_comparacion_metodos_vs_ONU.csv"), row.names = FALSE)
 
 # Diagnóstico de topes (idealmente cercano a 0 %)
 diag_topes <- comparacion %>%
@@ -537,7 +536,7 @@ if (PAIS_FOCO %in% paises) {
          x = NULL, y = NULL,
          caption = "Fuente: UN World Population Prospects 2024, variante Medium.") +
     theme_dataquest()
-  guardar_fig(g_foco, "01_colombia_proyecciones", ancho = 12, alto = 8)
+  guardar_fig(g_foco, "04_colombia_proyecciones", ancho = 12, alto = 8)
   
   # Todos los métodos para la edad mediana, para elegir con criterio
   met_col <- bind_rows(lapply(names(final$MedianAgePop), function(m) data.frame(
@@ -555,7 +554,7 @@ if (PAIS_FOCO %in% paises) {
          x = NULL, y = "Años",
          caption = "Fuente: UN World Population Prospects 2024, variante Medium.") +
     theme_dataquest()
-  guardar_fig(g_met, "01_colombia_edad_mediana_metodos", ancho = 10, alto = 6)
+  guardar_fig(g_met, "04_colombia_edad_mediana_metodos", ancho = 10, alto = 6)
 }
 
 g_val <- val_pais %>%
@@ -568,7 +567,7 @@ g_val <- val_pais %>%
   labs(title = "Backtesting con orígenes móviles (1990, 2000, 2010)",
        subtitle = "MASE < 1: mejor que el naive de un paso", x = NULL, y = "MASE (escala log)") +
   theme_dataquest() + theme(axis.text.x = element_text(angle = 30, hjust = 1))
-guardar_fig(g_val, "01_validacion_backtesting", ancho = 12, alto = 8)
+guardar_fig(g_val, "04_validacion_backtesting", ancho = 12, alto = 8)
 
 # 6b. Punto crítico pensional ------------------------------------------
 # Año crítico = primer año desde el cual la RS SE MANTIENE por debajo del umbral.
@@ -593,7 +592,7 @@ if ("RS" %in% VARS) {
       .groups = "drop"
     ) %>%
     mutate(Diferencia_anios = Critico_Propia - Critico_ONU)
-  write.csv(criticos, out("puntos_criticos_RS.csv"), row.names = FALSE)
+  write.csv(criticos, out("04_puntos_criticos_RS.csv"), row.names = FALSE)
   
   cat("\nPunto crítico (RS <", UMBRAL_RS, ") en", PAIS_FOCO, ":\n")
   print(as.data.frame(criticos %>% filter(ISO3_code == PAIS_FOCO)))
@@ -619,7 +618,7 @@ if ("RS" %in% VARS) {
            x = NULL, y = "Personas de 15-64 por persona de 65+",
            caption = "Fuente: UN World Population Prospects 2024, variante Medium.") +
       theme_dataquest()
-    guardar_fig(g_rs, "01_colombia_relacion_soporte", ancho = 9.5, alto = 5.6)
+    guardar_fig(g_rs, "04_colombia_relacion_soporte", ancho = 9.5, alto = 5.6)
   }
 } else {
   message("Sin RS en los datos: no se calculan puntos críticos.")
@@ -638,12 +637,12 @@ historico_largo <- datos_hist %>%
   select(any_of(c("ISO3_code", "Location")), Time, all_of(VARS)) %>%
   pivot_longer(all_of(VARS), names_to = "Variable", values_to = "Valor")
 
-write.csv(comparacion,     out("Proyecciones_Propias_vs_ONU_largo.csv"), row.names = FALSE)
-write.csv(salida_ancha,    out("Proyecciones_Propias_vs_ONU.csv"),       row.names = FALSE)
-write.csv(historico_largo, out("historico_largo.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+write.csv(comparacion,     out("04_Proyecciones_Propias_vs_ONU_largo.csv"), row.names = FALSE)
+write.csv(salida_ancha,    out("04_Proyecciones_Propias_vs_ONU.csv"),       row.names = FALSE)
+write.csv(historico_largo, out("04_historico_largo.csv"), row.names = FALSE, fileEncoding = "UTF-8")
 cat("\nTablas guardadas en:  ", normalizePath(CFG$dir_tablas), "\n",
     "Figuras guardadas en:", normalizePath(CFG$dir_figs), "\n")
 
 # 8. Cierre ------------------------------------------------------------
-writeLines(capture.output(sessionInfo()), out("sessionInfo.txt"))
+writeLines(capture.output(sessionInfo()), out("04_sessionInfo.txt"))
 dbDisconnect(con, shutdown = TRUE)
