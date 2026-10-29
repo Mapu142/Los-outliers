@@ -21,7 +21,7 @@ library(DT)
 
 # 1. Datos ----------------------------------------------------------------
 
-f_largo   <- "Proyecciones_Propias_vs_ONU_largo.csv"
+f_largo   <- "03_Proyecciones_Propias_vs_ONU_largo.csv"
 DIR_DATOS <- Filter(function(d) file.exists(file.path(d, f_largo)),
                     c("output/tablas", "../output/tablas", "."))
 if (length(DIR_DATOS) == 0) {
@@ -34,9 +34,9 @@ leer_opcional <- function(f) {
   if (file.exists(p)) read_csv(p, show_col_types = FALSE) else NULL
 }
 largo    <- read_csv(file.path(DIR_DATOS, f_largo), show_col_types = FALSE)
-hist_l   <- leer_opcional("historico_largo.csv")
-valid    <- leer_opcional("validacion_por_pais.csv")
-clusters <- leer_opcional("clusters.csv")
+hist_l   <- leer_opcional("03_historico_largo.csv")
+valid    <- leer_opcional("03_validacion_por_pais.csv")
+clusters <- leer_opcional("03_clusters.csv")
 if (!is.null(clusters) && !all(c("ISO3_code", "Cluster") %in% names(clusters))) clusters <- NULL
 
 if (!"ONU_en_IC95" %in% names(largo)) {

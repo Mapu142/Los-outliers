@@ -1,5 +1,10 @@
+
 # 0. Parámetros y librerías -------------------------------------------
 
+if (!file.exists("R/config.R")) {
+  stop("No se encuentra R/config.R. Abre el proyecto (.Rproj) o fija el ",
+       "directorio de trabajo en la raíz del proyecto con setwd().")
+}
 source("R/config.R", encoding = "UTF-8")
 source("R/tema.R",   encoding = "UTF-8")
 
@@ -11,11 +16,21 @@ library(ggplot2)
 library(forecast)
 library(mgcv)
 
-H              <- 77          # Horizonte - años a pronosticar (2024-2100)
+crear_directorios()
+set.seed(CFG$semilla)
+
+H              <- 77                       # años a pronosticar (2024-2100)
 ANIO_FIN_HIST  <- 2023
 ORIGENES       <- c(1990, 2000, 2010)      # orígenes del backtesting
 PAIS_FOCO      <- "COL"
+
+# CSV de población por grandes grupos de edad (descargado del portal de la ONU)
+# para la relación de soporte RS = población 15-64 / población 65+.
+# Es un quinto archivo de entrada: déjalo en data/raw con este nombre (o cambia
+# el nombre aquí) y documéntalo en DECISIONES.md.
+RUTA_POB_EDAD  <- file.path(CFG$dir_raw, "poblacion_por_edad.csv")
 POB_VARIANTE   <- "Median"
+
 UMBRAL_RS      <- 3        # trabajadores activos por pensionado
 
 # Territorios excluidos por población mínima y datos incompletos:
@@ -23,8 +38,19 @@ UMBRAL_RS      <- 3        # trabajadores activos por pensionado
 #  - NRU (Nauru): ~12 mil personas y no viene en el archivo de población por edad.
 EXCLUIR_PAISES <- c("VAT", "NRU")
 
-COL_VARIANT    <- "Variant"   
+COL_VARIANT    <- "Variant"               # columna de variante (si existe)
 VARIANTE_ONU   <- "Medium"
+
+# Método del pronóstico final: "Ensamble", "ETS", "GAM" o "Estructural"
+# ("Estructural" solo existe para MedianAgePop; las demás usan "Ensamble").
+METODO_FINAL   <- "Ensamble"
+stopifnot(METODO_FINAL %in% c("Ensamble", "ETS", "GAM", "Estructural"))
+
+# Método por variable, elegido con resumen_validacion.csv (menor error en
+# horizontes largos). Las variables no listadas usan METODO_FINAL.
+METODOS_POR_VARIABLE <- c(MedianAgePop = "Estructural", TFR = "Ensamble", LEx = "Ensamble",
+                          LE60 = "GAM", LE65 = "GAM", CBR = "GAM", IRG = "ETS",
+                          RS = "Ensamble")   # ETS + estructural: mejor MASE global en el backtesting (4.13)
 
 # El COVID (2020-2021) contamina la "tendencia reciente" con la que arranca
 # la proyección. Para ENTRENAR y arrancar el pronóstico se reemplazan esos
@@ -32,6 +58,9 @@ VARIANTE_ONU   <- "Medium"
 ANIOS_COVID <- c(2020, 2021)
 VARS_COVID  <- c("LEx", "LE60", "LE65", "IRG")
 
+# Fracción de series (país-origen) con mayores errores que se excluye al
+# calibrar los intervalos (choques tipo VIH, guerras, pandemia). Los intervalos
+# quedan condicionados a que no ocurra un choque de ese tipo.
 PROP_EXCLUIR_CHOQUES <- 0.10
 
 VARS_CORE  <- c("MedianAgePop", "TFR", "LEx")
@@ -48,25 +77,13 @@ LIMITES <- list(
   RS           = c(0.3, 30)
 )
 
-dir_out <- if (!is.null(CFG$dir_out)) CFG$dir_out else "R/time series"
-dir.create(dir_out, showWarnings = FALSE, recursive = TRUE)
-out <- function(f) file.path(dir_out, f)
-
-
-#Métodos para pronósticos
-METODO_FINAL   <- "Ensamble"
-stopifnot(METODO_FINAL %in% c("Ensamble", "ETS", "GAM", "Estructural"))
-
-# Método por variable, elegido con resumen_validacion.csv.
-METODOS_POR_VARIABLE <- c(MedianAgePop = "Estructural", TFR = "Ensamble", LEx = "Ensamble",
-                          LE60 = "GAM", LE65 = "GAM", CBR = "GAM", IRG = "ETS",
-                          RS = "Ensamble")  
-
+# Convención del proyecto (R/config.R): tablas en CFG$dir_tablas y figuras en
+# CFG$dir_figs (esta última la maneja guardar_fig()).
+out <- function(f) file.path(CFG$dir_tablas, f)
 
 # 1. Datos ------------------------------------------------------------
 
-#conexion con la base de datos
-con <- dbConnect(duckdb::duckdb()) 
+con <- dbConnect(duckdb::duckdb())
 ruta_parquet <- file.path(CFG$dir_clean, CFG$f_parquet)
 dbExecute(con, sprintf(
   "CREATE OR REPLACE VIEW wpp AS SELECT * FROM read_parquet('%s')", ruta_parquet
@@ -125,8 +142,6 @@ leer_relacion_soporte <- function(ruta) {
     pivot_wider(names_from = Age, values_from = Value) %>%
     transmute(ISO3_code, Time, RS = ifelse(`65+` > 0, `15-64` / `65+`, NA_real_))
 }
-
-RUTA_POB_EDAD  <- "R/time series/poblacion_por_edad.csv"
 
 if (file.exists(RUTA_POB_EDAD)) {
   rs_tab     <- leer_relacion_soporte(RUTA_POB_EDAD)
@@ -350,8 +365,6 @@ proyectar_todo <- function(M, h) {
 
 # 3. Backtesting con orígenes móviles ---------------------------------
 
-
-
 backtest <- function(M_full, origen) {
   anios <- as.integer(colnames(M_full[[1]]))
   i0    <- which(anios == origen)
@@ -383,8 +396,7 @@ val_pais <- bt %>%
   group_by(ISO3_code, Variable, Modelo, Origen) %>%
   summarise(MAE = mean(abs(obs - pred)), RMSE = sqrt(mean((obs - pred)^2)),
             MASE = MAE / first(escala), .groups = "drop")
-write.csv(val_pais, out("validacion_por_pais.csv"), row.names = FALSE)
-
+write.csv(val_pais, out("03_validacion_por_pais.csv"), row.names = FALSE)
 
 resumen_validacion <- bt %>%
   mutate(tramo = cut(h, c(0, 10, 20, Inf), labels = c("MASE_h1_10", "MASE_h11_20", "MASE_h21_mas")),
@@ -397,10 +409,9 @@ resumen_validacion <- bt %>%
             by = c("Variable", "Modelo")) %>%
   arrange(Variable, MASE_global)
 
-
 cat("\nValidación (mediana del error escalado; <1 = mejor que el naive de un paso):\n")
 print(as.data.frame(resumen_validacion), digits = 3)
-write.csv(resumen_validacion, out("resumen_validacion.csv"), row.names = FALSE)
+write.csv(resumen_validacion, out("03_resumen_validacion.csv"), row.names = FALSE)
 
 # 4. Pronóstico final 2024-2100 ---------------------------------------
 
@@ -446,7 +457,7 @@ proy_largo <- bind_rows(lapply(VARS, function(v) {
     lo95 = cl(as.vector(P + esc %o% b$q025)), hi95 = cl(as.vector(P + esc %o% b$q975))
   )
 }))
-saveRDS(final, out("proyecciones_todos_los_metodos.rds"))
+saveRDS(final, file.path(CFG$dir_clean, "03_proyecciones_todos_los_metodos.rds"))
 
 # 5. Comparación contra la ONU ---------------------------------------
 
@@ -464,7 +475,7 @@ resumen_discrepancia <- comparacion %>%
             disc_abs_media = mean(abs(Discrepancia), na.rm = TRUE),
             pct_ONU_en_IC = 100 * mean(ONU_en_IC95, na.rm = TRUE), .groups = "drop")
 cat("\nDiscrepancia del método final contra la ONU:\n"); print(as.data.frame(resumen_discrepancia), digits = 3)
-write.csv(resumen_discrepancia, out("resumen_discrepancia.csv"), row.names = FALSE)
+write.csv(resumen_discrepancia, out("03_resumen_discrepancia.csv"), row.names = FALSE)
 
 # Comparación de TODOS los métodos contra la ONU (solo como chequeo de
 # razonabilidad: el método se elige por backtesting, no por parecerse a la ONU)
@@ -483,7 +494,7 @@ cmp_metodos <- bind_rows(lapply(VARS, function(v) {
   }))
 })) %>% arrange(Variable, MAE_vs_ONU)
 cat("\nDistancia a la ONU por método (menor = más parecido):\n"); print(as.data.frame(cmp_metodos), digits = 3)
-write.csv(cmp_metodos, out("comparacion_metodos_vs_ONU.csv"), row.names = FALSE)
+write.csv(cmp_metodos, out("03_comparacion_metodos_vs_ONU.csv"), row.names = FALSE)
 
 # Diagnóstico de topes (idealmente cercano a 0 %)
 diag_topes <- comparacion %>%
@@ -509,43 +520,53 @@ if (PAIS_FOCO %in% paises) {
   fut_foco <- comparacion %>% filter(ISO3_code == PAIS_FOCO)
   
   g_foco <- ggplot() +
-    geom_line(data = hist_foco, aes(Time, Valor), colour = "grey30") +
-    geom_ribbon(data = fut_foco, aes(Time, ymin = lo95, ymax = hi95), fill = "steelblue", alpha = 0.2) +
-    geom_line(data = fut_foco, aes(Time, Propia, colour = "Propia")) +
-    geom_line(data = fut_foco, aes(Time, ONU, colour = "ONU Medium"), linetype = "dashed") +
+    capa_proyeccion(etiquetas = FALSE) +
+    geom_line(data = hist_foco, aes(Time, Valor, colour = "Observado"), linewidth = 0.9) +
+    geom_ribbon(data = fut_foco, aes(Time, ymin = lo95, ymax = hi95), fill = PAL$proyeccion, alpha = 0.18) +
+    geom_line(data = fut_foco, aes(Time, Propia, colour = "Proyección propia"), linewidth = 1) +
+    geom_line(data = fut_foco, aes(Time, ONU, colour = "ONU (Medium)"), linetype = "dashed", linewidth = 0.9) +
     facet_wrap(~ Variable, scales = "free_y") +
-    scale_colour_manual(values = c("Propia" = "steelblue", "ONU Medium" = "firebrick")) +
+    scale_colour_manual(values = c("Observado" = PAL$estimacion,
+                                   "Proyección propia" = PAL$proyeccion,
+                                   "ONU (Medium)" = PAL$acento), name = NULL) +
+    scale_x_continuous(breaks = seq(1950, 2100, 50)) +
     labs(title = paste("Proyecciones propias vs. ONU:", PAIS_FOCO),
-         subtitle = "Método elegido por variable (METODOS_POR_VARIABLE) · banda = IC95 empírico del backtesting",
-         x = NULL, y = NULL, colour = NULL) +
-    theme_minimal() + theme(legend.position = "bottom")
-  ggsave(out("grafico_colombia.png"), g_foco, width = 12, height = 8, dpi = 150)
+         subtitle = "Método elegido por variable. Banda: IC95 empírico del backtesting.",
+         x = NULL, y = NULL,
+         caption = "Fuente: UN World Population Prospects 2024, variante Medium.") +
+    theme_dataquest()
+  guardar_fig(g_foco, "03_colombia_proyecciones", ancho = 12, alto = 8)
   
   # Todos los métodos para la edad mediana, para elegir con criterio
   met_col <- bind_rows(lapply(names(final$MedianAgePop), function(m) data.frame(
     Time = anios_fut, Valor = final$MedianAgePop[[m]][PAIS_FOCO, ], Modelo = m)))
   g_met <- ggplot() +
-    geom_line(data = hist_foco %>% filter(Variable == "MedianAgePop"), aes(Time, Valor), colour = "grey30") +
+    capa_proyeccion(etiquetas = FALSE) +
+    geom_line(data = hist_foco %>% filter(Variable == "MedianAgePop"), aes(Time, Valor),
+              colour = PAL$estimacion, linewidth = 0.9) +
     geom_line(data = met_col, aes(Time, Valor, colour = Modelo), linewidth = 1) +
     geom_line(data = fut_foco %>% filter(Variable == "MedianAgePop"), aes(Time, ONU),
-              colour = "black", linetype = "dashed") +
-    labs(title = paste("Edad mediana", PAIS_FOCO, ": métodos vs. ONU (negro discontinuo)"),
-         x = NULL, y = "Años", colour = NULL) +
-    theme_minimal() + theme(legend.position = "bottom")
-  ggsave(out("grafico_metodos_edad_mediana.png"), g_met, width = 10, height = 6, dpi = 150)
+              colour = PAL$texto, linetype = "dashed", linewidth = 0.9) +
+    scale_colour_dq_d(name = NULL) +
+    labs(title = paste("Edad mediana", PAIS_FOCO, ": métodos frente a la ONU"),
+         subtitle = "Línea discontinua negra: ONU (variante Medium).",
+         x = NULL, y = "Años",
+         caption = "Fuente: UN World Population Prospects 2024, variante Medium.") +
+    theme_dataquest()
+  guardar_fig(g_met, "03_colombia_edad_mediana_metodos", ancho = 10, alto = 6)
 }
 
 g_val <- val_pais %>%
   filter(is.finite(MASE), MASE > 0) %>%
   ggplot(aes(Modelo, MASE)) +
-  geom_boxplot(outlier.alpha = 0.3) +
-  geom_hline(yintercept = 1, linetype = "dashed", colour = "firebrick") +
+  geom_boxplot(outlier.alpha = 0.3, fill = PAL$estimacion, alpha = 0.35, colour = PAL$texto_suave) +
+  geom_hline(yintercept = 1, linetype = "dashed", colour = PAL$acento) +
   scale_y_log10() +
   facet_wrap(~ Variable, scales = "free_y") +
   labs(title = "Backtesting con orígenes móviles (1990, 2000, 2010)",
        subtitle = "MASE < 1: mejor que el naive de un paso", x = NULL, y = "MASE (escala log)") +
-  theme_minimal() + theme(axis.text.x = element_text(angle = 30, hjust = 1))
-ggsave(out("grafico_validacion.png"), g_val, width = 12, height = 8, dpi = 150)
+  theme_dataquest() + theme(axis.text.x = element_text(angle = 30, hjust = 1))
+guardar_fig(g_val, "03_validacion_backtesting", ancho = 12, alto = 8)
 
 # 6b. Punto crítico pensional ------------------------------------------
 # Año crítico = primer año desde el cual la RS SE MANTIENE por debajo del umbral.
@@ -570,7 +591,7 @@ if ("RS" %in% VARS) {
       .groups = "drop"
     ) %>%
     mutate(Diferencia_anios = Critico_Propia - Critico_ONU)
-  write.csv(criticos, out("puntos_criticos_RS.csv"), row.names = FALSE)
+  write.csv(criticos, out("03_puntos_criticos_RS.csv"), row.names = FALSE)
   
   cat("\nPunto crítico (RS <", UMBRAL_RS, ") en", PAIS_FOCO, ":\n")
   print(as.data.frame(criticos %>% filter(ISO3_code == PAIS_FOCO)))
@@ -581,17 +602,22 @@ if ("RS" %in% VARS) {
     rs_hist <- datos_hist %>% filter(ISO3_code == PAIS_FOCO) %>% select(Time, RS)
     rs_fut  <- comparacion %>% filter(ISO3_code == PAIS_FOCO, Variable == "RS")
     g_rs <- ggplot() +
-      geom_line(data = rs_hist, aes(Time, RS), colour = "grey30") +
-      geom_ribbon(data = rs_fut, aes(Time, ymin = lo95, ymax = hi95), fill = "steelblue", alpha = 0.2) +
-      geom_line(data = rs_fut, aes(Time, Propia, colour = "Propia")) +
-      geom_line(data = rs_fut, aes(Time, ONU, colour = "ONU Medium"), linetype = "dashed") +
-      geom_hline(yintercept = UMBRAL_RS, linetype = "dotted") +
-      scale_colour_manual(values = c("Propia" = "steelblue", "ONU Medium" = "firebrick")) +
+      capa_proyeccion(etiquetas = FALSE) +
+      geom_line(data = rs_hist, aes(Time, RS, colour = "Observado"), linewidth = 0.9) +
+      geom_ribbon(data = rs_fut, aes(Time, ymin = lo95, ymax = hi95), fill = PAL$proyeccion, alpha = 0.18) +
+      geom_line(data = rs_fut, aes(Time, Propia, colour = "Proyección propia"), linewidth = 1) +
+      geom_line(data = rs_fut, aes(Time, ONU, colour = "ONU (Medium)"), linetype = "dashed", linewidth = 0.9) +
+      geom_hline(yintercept = UMBRAL_RS, linetype = "dotted", colour = PAL$texto_suave) +
+      scale_colour_manual(values = c("Observado" = PAL$estimacion,
+                                     "Proyección propia" = PAL$proyeccion,
+                                     "ONU (Medium)" = PAL$acento), name = NULL) +
+      scale_x_continuous(breaks = seq(1950, 2100, 25)) +
       labs(title = paste("Relación de soporte (15-64 / 65+):", PAIS_FOCO),
-           subtitle = paste("Umbral =", UMBRAL_RS, "trabajadores por pensionado"),
-           x = NULL, y = "RS", colour = NULL) +
-      theme_minimal() + theme(legend.position = "bottom")
-    ggsave(out("grafico_relacion_soporte.png"), g_rs, width = 9, height = 5, dpi = 150)
+           subtitle = paste("Línea punteada: umbral de", UMBRAL_RS, "trabajadores por pensionado."),
+           x = NULL, y = "Personas de 15-64 por persona de 65+",
+           caption = "Fuente: UN World Population Prospects 2024, variante Medium.") +
+      theme_dataquest()
+    guardar_fig(g_rs, "03_colombia_relacion_soporte", ancho = 9.5, alto = 5.6)
   }
 } else {
   message("Sin RS en los datos: no se calculan puntos críticos.")
@@ -610,22 +636,12 @@ historico_largo <- datos_hist %>%
   select(any_of(c("ISO3_code", "Location")), Time, all_of(VARS)) %>%
   pivot_longer(all_of(VARS), names_to = "Variable", values_to = "Valor")
 
-write.csv(comparacion,     out("Proyecciones_Propias_vs_ONU_largo.csv"), row.names = FALSE)
-write.csv(salida_ancha,    out("Proyecciones_Propias_vs_ONU.csv"),       row.names = FALSE)
-write.csv(historico_largo, out("historico_largo.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-cat("\nArchivos guardados en:", normalizePath(dir_out), "\n")
+write.csv(comparacion,     out("03_Proyecciones_Propias_vs_ONU_largo.csv"), row.names = FALSE)
+write.csv(salida_ancha,    out("03_Proyecciones_Propias_vs_ONU.csv"),       row.names = FALSE)
+write.csv(historico_largo, out("03_historico_largo.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+cat("\nTablas guardadas en:  ", normalizePath(CFG$dir_tablas), "\n",
+    "Figuras guardadas en:", normalizePath(CFG$dir_figs), "\n")
 
 # 8. Cierre ------------------------------------------------------------
-writeLines(capture.output(sessionInfo()), out("sessionInfo.txt"))
+writeLines(capture.output(sessionInfo()), out("03_sessionInfo.txt"))
 dbDisconnect(con, shutdown = TRUE)
-
-
-
-
-
-
-
-x <- read.csv("outputs/puntos_criticos_RS.csv")
-table(propia = !is.na(x$Critico_Propia), onu = !is.na(x$Critico_ONU))
-d <- x$Critico_Propia - x$Critico_ONU
-c(mediana = median(d, na.rm = TRUE), dentro_5_anios = mean(abs(d) <= 5, na.rm = TRUE))
