@@ -168,9 +168,9 @@ previsualizar_paleta <- function() {
   )
   ggplot2::ggplot(df, ggplot2::aes(x, 1, fill = hex)) +
     ggplot2::geom_tile(width = 0.92, height = 0.7) +
-    ggplot2::geom_text(ggplot2::aes(label = nombre), vjust = 3.0, size = 3.4,
+    ggplot2::geom_text(ggplot2::aes(y = 0.58, label = nombre), vjust = 1, size = 3.4,
                        colour = PAL$texto) +
-    ggplot2::geom_text(ggplot2::aes(label = hex), vjust = 4.6, size = 3,
+    ggplot2::geom_text(ggplot2::aes(y = 0.58, label = hex), vjust = 2.6, size = 3,
                        colour = PAL$texto_suave) +
     ggplot2::scale_fill_identity() +
     ggplot2::scale_y_continuous(limits = c(0.2, 1.5)) +

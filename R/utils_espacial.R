@@ -26,14 +26,42 @@ reparar_geometrias <- function(x) {
     if (any(as.character(sf::st_geometry_type(x)) == "GEOMETRYCOLLECTION")) {
       x <- sf::st_collection_extract(x, "POLYGON")
     }
-    suppressWarnings(sf::st_wrap_dateline(x, options = "WRAPDATELINE=YES", quiet = TRUE))
+    x <- suppressWarnings(sf::st_wrap_dateline(x, options = "WRAPDATELINE=YES", quiet = TRUE))
+    sf::st_cast(x, "MULTIPOLYGON")      # tipo homogéneo: todas las filas MULTIPOLYGON
   })
+}
+
+# Separa multipolígonos en polígonos individuales SIN perder partes.
+# Error corregido (D22): st_cast(x, "POLYGON") sobre un sfc de tipo MIXTO (POLYGON +
+# MULTIPOLYGON) conserva solo la PRIMERA parte de cada país (con una advertencia que antes
+# se silenciaba). Normalizar primero a MULTIPOLYGON evita el problema.
+a_partes <- function(x) {
+  suppressWarnings(sf::st_cast(sf::st_cast(x, "MULTIPOLYGON"), "POLYGON"))
+}
+
+# Comprueba que el punto de un país cae dentro de una caja lon/lat
+punto_en_caja <- function(pts, cod, lon, lat) {
+  p <- pts[pts$iso3 == cod, ]
+  nrow(p) == 1 && p$lon >= lon[1] && p$lon <= lon[2] && p$lat >= lat[1] && p$lat <= lat[2]
+}
+
+# Tabla de data.frame a Markdown (para pegar resultados en ANALISIS_ESPACIAL.md)
+md_tabla <- function(df, digitos = 3) {
+  df <- as.data.frame(df, stringsAsFactors = FALSE)
+  celdas <- lapply(df, function(x) {
+    if (is.numeric(x)) ifelse(is.na(x), "", as.character(round(x, digitos)))
+    else ifelse(is.na(x), "", as.character(x))
+  })
+  filas <- do.call(paste, c(celdas, sep = " | "))
+  c(paste0("| ", paste(names(df), collapse = " | "), " |"),
+    paste0("|", paste(rep("---", ncol(df)), collapse = "|"), "|"),
+    paste0("| ", filas, " |"))
 }
 
 # Amplitud en longitud de cada polígono individual: una parte > 180 grados indica que
 # cruza el antimeridiano (Rusia continental llega a ~160).
 amplitud_lon_partes <- function(x) {
-  p <- suppressWarnings(sf::st_cast(x, "POLYGON"))
+  p <- a_partes(x)
   g <- sf::st_geometry(p)
   span <- vapply(seq_along(g), function(i) {
     b <- sf::st_bbox(g[i]); as.numeric(b[["xmax"]] - b[["xmin"]])
@@ -86,8 +114,9 @@ moran_global <- function(x, W, nsim = 999L) {
 
 # ---- Moran local (LISA) con permutación condicional + corrección FDR (BH) ---
 # La familia de pruebas para BH es el conjunto de países de UNA variable-año.
-moran_local <- function(x, nb, nsim = 999L, alfa = 0.05) {
+moran_local <- function(x, nb, nsim = 999L, alfa = 0.05, semilla = NULL) {
   stopifnot(!anyNA(x), length(x) == length(nb))
+  if (!is.null(semilla)) set.seed(semilla)   # misma semilla = mismo resultado, sin depender del orden de ejecución
   n <- length(x)
   z <- x - mean(x)
   zs <- z / sqrt(mean(z^2))

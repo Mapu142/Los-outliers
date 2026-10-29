@@ -137,7 +137,7 @@ seccion("4. PUNTOS REPRESENTATIVOS")
 # Francia incluye la Guayana Francesa, Noruega incluye Svalbard, etc. Usar el centroide
 # del multipolígono completo movería el punto hacia el océano. Se toma un punto DENTRO
 # del polígono individual de mayor área.
-partes <- suppressWarnings(sf::st_cast(mundo, "POLYGON"))
+partes <- a_partes(mundo)      # normaliza a MULTIPOLYGON antes de separar (D22)
 # Área en proyección cilíndrica de área igual (planar): evita depender de s2 (D22)
 partes$area_km2 <- as.numeric(sf::st_area(sf::st_transform(partes, "+proj=cea +lat_ts=30 +datum=WGS84"))) / 1e6
 principal <- partes |> group_by(iso3) |> slice_max(area_km2, n = 1, with_ties = FALSE) |> ungroup()
@@ -153,17 +153,24 @@ ver(partes |> sf::st_drop_geometry() |> filter(iso3 %in% c("FRA", "IDN", "RUS", 
       group_by(iso3) |> slice_max(area_km2, n = 2, with_ties = FALSE) |> ungroup() |>
       transmute(iso3, nombre_ne, area_km2 = round(area_km2)))
 
-en_caja <- function(cod, lon, lat) {
-  p <- pts[pts$iso3 == cod, ]
-  nrow(p) == 1 && p$lon >= lon[1] && p$lon <= lon[2] && p$lat >= lat[1] && p$lat <= lat[2]
-}
+# Controles de que NO se perdieron partes: antes la tabla anterior devolvía 1 fila por país y
+# áreas de 164-27 000 km2 para Estados Unidos, Indonesia o Rusia.
+area_max <- function(cod) max(partes$area_km2[partes$iso3 == cod])
+verificar(nrow(partes) > 1.5 * nrow(mundo),
+          sprintf("Se conservan las partes: %d polígonos individuales para %d países.", nrow(partes), nrow(mundo)),
+          sprintf("Solo %d polígonos individuales para %d países: se están perdiendo partes.", nrow(partes), nrow(mundo)))
+verificar(area_max("FRA") > 4e5 && area_max("USA") > 7e6 && area_max("RUS") > 1.4e7,
+          sprintf("Áreas plausibles: parte mayor de Francia %.0f, Estados Unidos %.0f y Rusia %.0f km2.",
+                  area_max("FRA"), area_max("USA"), area_max("RUS")),
+          "Las áreas de las partes mayores no son plausibles (Francia > 4e5, EE. UU. > 7e6, Rusia > 1.4e7 km2).")
+
+en_caja <- function(cod, lon, lat) punto_en_caja(pts, cod, lon, lat)
 verificar(en_caja("FRA", c(-5, 8.5), c(42, 51.5)),
           "Francia: el punto cae en la Francia metropolitana (no en Córcega ni en ultramar).",
-          "Francia: el punto NO cae en la Francia metropolitana; revisar áreas de las partes.",
-          fatal = FALSE)
+          "Francia: el punto NO cae en la Francia metropolitana; revisar áreas de las partes.")
 verificar(en_caja("USA", c(-125, -66), c(24, 50)),
           "Estados Unidos: el punto cae en el territorio continental.",
-          "Estados Unidos: el punto no cae en el territorio continental.", fatal = FALSE)
+          "Estados Unidos: el punto no cae en el territorio continental.")
 cat("Nota: en Natural Earth 'countries', Reunión, Guadalupe, Martinica, Mayotte y Guayana Francesa\n",
     "      forman parte del polígono de Francia; WPP los lista aparte (todos fuera del universo).\n", sep = "")
 

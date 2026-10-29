@@ -2,7 +2,7 @@
 
 Guía de navegación, registro de hallazgos y plan de trabajo del proyecto. **Léela completa antes de escribir código nuevo** y actualízala al cerrar cada fase.
 
-> **Estado actual (28-oct-2026):** Fase 0 completa. Fase 1 casi cerrada: plan analítico (`PLAN_ANALITICO.md`), estructura por edad de la ONU y del DANE (scripts 03 y 03b) y datos externos E1, E2 y E5 cargados y verificados. **Ampliación espacial ejecutada** (scripts 04 y 05, exploratoria). Siguiente: re-ejecutar 04 y 05 con las correcciones de geometría (D22), anexar D19-D25 a `DECISIONES.md` y pasar a la EDA (Fase 2).
+> **Estado actual (28-oct-2026):** Fase 0 completa. Fase 1 casi cerrada: plan analítico (`PLAN_ANALITICO.md`), estructura por edad de la ONU y del DANE (scripts 03 y 03b) y datos externos E1, E2 y E5 cargados y verificados. **Ampliación espacial en curso** (scripts 04 a 06, exploratoria; ver `ANALISIS_ESPACIAL.md`). Siguiente: re-ejecutar 04 y 05 con las correcciones de geometría (D22: error de `st_cast` hallado en la 2ª ejecución del 04), anexar D19-D25 a `DECISIONES.md` y pasar a la EDA (Fase 2).
 
 ---
 
@@ -24,7 +24,7 @@ Principio rector: **una pregunta central bien respondida** vale más que muchos 
 |---|---|---|
 | 0 | ETL, validación, parquet limpio, tema visual | ✅ Completa |
 | 1 | Pregunta central, plan analítico y datos externos | ⏳ Casi cerrada |
-| 1b | Ampliación espacial: geometrías, mapas, Moran y LISA | ✅ Ejecutada; re-ejecutar tras D22 |
+| 1b | Ampliación espacial: geometrías, mapas, Moran y LISA | ⏳ Re-ejecutar 04, 05 y 06 tras la corrección de D22 |
 | 2 | EDA | ⬜ |
 | 3 | Modelado e incertidumbre | ⬜ |
 | 4 | Reporte Rmd | ⬜ |
@@ -43,8 +43,8 @@ Principio rector: **una pregunta central bien respondida** vale más que muchos 
 - [x] Script 03: estructura por edad ONU y DANE, empalme y puntos de control (lectura robusta de los dos Excel).
 - [x] Script 03b: diagnóstico que cerró las tres alertas del 03.
 - [x] Script 04: geometrías Natural Earth y cruce por ISO3.
-- [x] Script 05: mapas, Moran global, LISA y sensibilidad a k.
-- [ ] Re-ejecutar 04 y 05 con las correcciones de D22 y revisar los PNG (V6-V8).
+- [x] Script 05 (mapas) y script 06 (Moran global, LISA y sensibilidad a k).
+- [ ] Re-ejecutar 04, 05 y 06 con la corrección de `a_partes()` (D22), registrar la corrida C en `ANALISIS_ESPACIAL.md` y revisar los PNG (V6-V8).
 - [ ] Anexar D19-D25 a `DECISIONES.md` y completar `FUENTES.md` (E1, E2, E5).
 - [ ] Confirmar con las salidas del script 02 las decisiones D12, D14 y D17.
 
@@ -57,6 +57,7 @@ proyecto-wpp2024/
 ├── README.md                      <- este archivo
 ├── DECISIONES.md                  <- registro de decisiones (Paso 4)
 ├── PLAN_ANALITICO.md              <- plan previo (pasos 5 y 6)
+├── ANALISIS_ESPACIAL.md           <- bitácora del análisis espacial (corridas, observaciones)
 ├── proyecto-wpp2024.Rproj
 │
 ├── data/
@@ -85,7 +86,7 @@ proyecto-wpp2024/
 │   ├── config.R                   <- CFG, rutas, paleta, constantes
 │   ├── tema.R                     <- theme_dataquest() y escalas de color
 │   ├── utils_datos.R              <- conexión duckdb, helpers SQL, ver()
-│   ├── utils_espacial.R           <- kNN, Moran global y local, reparación de geometrías, mapas
+│   ├── utils_espacial.R           <- kNN, Moran global y local, a_partes(), reparación de geometrías, mapas
 │   └── utils_modelos.R            <- PCA, clustering, métricas (pendiente)
 │
 ├── scripts/                       <- pipeline numerado, se ejecuta en orden
@@ -95,9 +96,10 @@ proyecto-wpp2024/
 │   ├── 03_estructura_edad_onu_dane.R      ✅ PSR de la ONU y del DANE, empalme, puntos de control
 │   ├── 03b_diagnostico_edad_onu.R         ✅ diagnóstico que cerró las alertas del 03
 │   ├── 04_espacial_geometrias.R           ✅ fronteras y cruce por ISO3
-│   ├── 05_espacial_mapas_moran.R          ✅ mapas, Moran, LISA
-│   └── pendientes (numeración tentativa): 06_eda · 07_features · 08_pca_clustering ·
-│                                          09_modelos_gam_ts · 10_incertidumbre_variantes
+│   ├── 05_espacial_mapas.R                ✅ mapas coropléticos descriptivos
+│   ├── 06_espacial_moran_lisa.R           ✅ Moran, LISA, sensibilidad, figuras y resumen .md
+│   └── pendientes (numeración tentativa): 07_eda · 08_features · 09_pca_clustering ·
+│                                          10_modelos_gam_ts · 11_incertidumbre_variantes
 │
 ├── reporte/
 │   └── reporte_wpp2024.Rmd
@@ -232,7 +234,9 @@ Al ser medianas entre países, cada país pesa igual sin importar su tamaño. Es
 | Universo (≥ 1 millón en 2023) | 161 países; con la recodificación de Kosovo los 161 tienen polígono (confirmar al re-ejecutar) |
 | Incidente de la primera ejecución | Franja horizontal en el mapa (Rusia), línea fina (Fiji) y punto de Francia en Córcega. Causa probable: `st_make_valid()` con s2 activo. Corrección en D22 |
 
-### 4.11 Resultados espaciales exploratorios (script 05, 160 países, antes de recodificar Kosovo)
+**Hallazgo posterior (2ª ejecución del 04):** `st_cast(x, "POLYGON")` sobre una geometría de tipo mixto conserva solo la primera parte de cada país; la tabla de control mostró 1 fila por país y áreas de 164 a 27 033 km² (Estados Unidos 185, Indonesia 164, Francia 2 542). Los puntos representativos de los países con varias partes estaban mal, y con ellos los vecinos kNN. Los mapas no se afectan. Corregido con `a_partes()` (D22); **toda cifra de 4.11 queda provisional hasta re-ejecutar**.
+
+### 4.11 Resultados espaciales exploratorios (PROVISIONALES: corrida con puntos defectuosos; ver `ANALISIS_ESPACIAL.md`)
 
 | Variable | 2023 (estimación) | 2050 | 2100 |
 |---|---|---|---|
@@ -303,7 +307,7 @@ Paquetes base: `DBI`, `duckdb`, `dplyr`, `tidyr`, `ggplot2`, `glue`, `scales`, `
 
 **Paquetes de la Fase 1 y de la ampliación espacial:** `readxl` (script 03), `sf`, `rnaturalearth`, `rnaturalearthdata` (04 y 05) y, de forma opcional, `spdep` (verificación cruzada del Moran). `sf` necesita GDAL y PROJ (en Windows vienen con el binario de CRAN).
 
-**Orden de ejecución:** 00 → 01 → 02 → 03b → 03 → 04 → 05. El 04 debe re-ejecutarse siempre que cambie `RECODIFICAR_NE` o la escala de Natural Earth. El 05 es el más lento (LISA con 4999 permutaciones, también en la sensibilidad a k).
+**Orden de ejecución:** 00 → 01 → 02 → 03b → 03 → 04 → 05 → 06. El 04 debe re-ejecutarse siempre que cambie `RECODIFICAR_NE` o la escala de Natural Earth. El 06 es el más lento (LISA con 4999 permutaciones, también en la sensibilidad a k).
 
 ---
 
@@ -341,7 +345,7 @@ ver(dbGetQuery(con, "
 |---|---|---|
 | V6 | Abrir los PNG de `output/figuras/05_mapa_*.png` (no el panel de RStudio): sin franjas ni líneas horizontales | Era el síntoma de la reparación de geometrías con s2 (D22) |
 | V7 | En la salida del 04: punto de Francia dentro de la Francia metropolitana y universo = 161 con polígono | Confirma la recodificación de Kosovo y el cálculo de áreas |
-| V8 | Re-ejecutar el 05 y comparar con la sección 4.11: Moran ≈ 0.7 y LISA estable con k = 5 y 8 | Las cifras de 4.11 son previas a las 4999 permutaciones |
+| V8 | Re-ejecutar el 06 y comparar con la sección 4.11 y con `ANALISIS_ESPACIAL.md`: Moran ≈ 0.7 y LISA estable con k = 5 y 8 | Las cifras de 4.11 son previas a las 4999 permutaciones |
 | V9 | En el 03: `La suma por edades reproduce la columna Total del Excel` | Validación interna del Excel 2018-2070, independiente del PDF |
 
 ---
@@ -379,10 +383,10 @@ Cada fase termina con un **entregable verificable** y un **criterio de cierre**.
 ### FASE 1b · Ampliación espacial (scripts 04 y 05) ✅
 
 **Paso E1.** Geometrías y cruce por ISO3 (`04_espacial_geometrias.R`). *Criterio de cierre:* todos los países del universo con polígono; listas de lo que no cruza.
-**Paso E2.** Mapas coropléticos de edad mediana, TFR y velocidad de envejecimiento; Moran global (por año y en años clave) y LISA con FDR (`05_espacial_mapas_moran.R`). *Criterio de cierre:* sensibilidad a k reportada y mapas sin artefactos.
+**Paso E2.** Mapas coropléticos (`05_espacial_mapas.R`); Moran global (por año y en años clave), sensibilidad a k y LISA con FDR (`06_espacial_moran_lisa.R`). *Criterio de cierre:* sensibilidad a k reportada y mapas sin artefactos.
 **Paso E3.** Ampliaciones pendientes: LISA sobre los arquetipos del clustering (conteo de uniones) y análisis subnacional de Colombia (requiere fuentes nuevas del DANE, por registrar en `FUENTES.md`).
 
-### FASE 2 · EDA (`scripts/06_eda.R`, numeración tentativa)
+### FASE 2 · EDA (`scripts/07_eda.R`, numeración tentativa)
 
 **Paso 7.** Tendencias globales y regionales, con quiebre estimación/proyección.
 **Paso 8.** Transición demográfica: TFR frente a LEx, edad mediana, reemplazo (TFR = 2.1; NRR = 1). Aprovechar el hallazgo de 4.6: la mediana de TFR en 2023 ya está bajo el reemplazo.
@@ -393,12 +397,12 @@ Cada fase termina con un **entregable verificable** y un **criterio de cierre**.
 
 ### FASE 3 · Modelado
 
-**Paso 11.** Características por país (`07_features.R`): niveles en años de referencia, cambios 1950→2023, pendientes recientes. Estandarizar y guardar.
-**Paso 12.** PCA (`08_pca_clustering.R`): varianza explicada, cargas e interpretación; supuesto de linealidad.
+**Paso 11.** Características por país (`08_features.R`): niveles en años de referencia, cambios 1950→2023, pendientes recientes. Estandarizar y guardar.
+**Paso 12.** PCA (`09_pca_clustering.R`): varianza explicada, cargas e interpretación; supuesto de linealidad.
 **Paso 13.** Clustering: k-means y jerárquico; k por silueta, estabilidad por remuestreo y sentido sustantivo; `set.seed(2026)`.
-**Paso 14.** Modelos complementarios (`09_modelos_gam_ts.R`): GAM (edf, R² ajustado, AIC, RMSE) y series de tiempo solo si aportan, ajustadas sobre **estimaciones** y contrastadas con la proyección de la ONU.
+**Paso 14.** Modelos complementarios (`10_modelos_gam_ts.R`): GAM (edf, R² ajustado, AIC, RMSE) y series de tiempo solo si aportan, ajustadas sobre **estimaciones** y contrastadas con la proyección de la ONU.
 **Paso 15a.** Perfilar OtherVariants (verificaciones V2-V5) y cerrar D8.
-**Paso 15b.** Incertidumbre (`10_incertidumbre_variantes.R`):
+**Paso 15b.** Incertidumbre (`11_incertidumbre_variantes.R`):
 - SQL sobre OtherVariants; a R solo llegan agregaciones.
 - Amplitud relativa entre `High` y `Low` en 2100 y ancho de los intervalos de 80 % y 95 % (solo donde existan).
 - Cruzar con los clusters del Paso 13.
@@ -440,6 +444,7 @@ Cada fase termina con un **entregable verificable** y un **criterio de cierre**.
 | F4 Reproducibilidad | Scripts numerados, semillas, `renv` |
 | B1 Fuentes externas | `FUENTES.md` (E1, E2, E5) con URL, fecha, licencia y transformaciones; versiones del DANE (marzo de 2023 y julio de 2025) declaradas |
 | B2 Limitaciones del empalme | Ruptura del DANE en 2017/2018 documentada (D25); el PDF solo valida el tramo histórico (D20) |
+| B1/B2 Auditoría de geometrías | Error de `st_cast` documentado y corregido; controles automáticos en 04 y 06; corridas registradas en `ANALISIS_ESPACIAL.md` |
 | B3 Comparaciones múltiples | LISA con FDR (BH) dentro de cada mapa; sensibilidad a k y al número de permutaciones (D23, D24) |
 | D6 Mapas y grupos | Fronteras ilustrativas; grupos LISA con nombres descriptivos, sin etiquetar países |
 
@@ -480,6 +485,7 @@ Cada fase termina con un **entregable verificable** y un **criterio de cierre**.
 | Punto representativo de Francia en Córcega | Áreas calculadas con geometrías alteradas | Área en proyección `cea` y comprobación en el script 04 (D22) |
 | Kosovo sin polígono | Natural Earth usa `KOS` y WPP usa `XKX` | `RECODIFICAR_NE` (D22) |
 | `Selections can't have missing values` en `rename()` | El Excel 1950-2017 no tenía la estructura supuesta | Detección del encabezado en una o dos filas (script 03) |
+| Puntos representativos en islas (Francia en Córcega, áreas de 164 km² para Indonesia) | `st_cast(, "POLYGON")` sobre geometría mixta conserva solo la primera parte; el aviso estaba silenciado | `a_partes()` (normaliza a MULTIPOLYGON) y controles de áreas y puntos en el 04 (D22) |
 | `read_excel(skip =)` toma el subtítulo como encabezado | `skip` cuenta filas físicas; la lectura sin encabezado recorta las vacías | Leer la hoja completa como texto y localizar AÑO |
 | El PDF del DANE no reproduce 2018-2070 | Excel de julio de 2025 frente a PDF de marzo de 2023 | Los puntos de control validan solo el tramo histórico (D20) |
 | Salto del DANE entre 2017 y 2018 | Dos versiones empalmadas | D25: P3 usa solo 2018-2070 |
