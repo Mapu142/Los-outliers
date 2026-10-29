@@ -13,16 +13,22 @@ library(DT)
 
 # 1. Datos ----------------------------------------------------------------
 
-leer_opcional <- function(f) if (file.exists(f)) read_csv(f, show_col_types = FALSE) else NULL
-
-f_largo <- "Proyecciones_Propias_vs_ONU_largo.csv"
-if (!file.exists(f_largo)) {
-  stop("No se encuentra '", f_largo, "'. Copia los CSV del script de modelamiento a la carpeta de la app.")
+f_largo   <- "04_Proyecciones_Propias_vs_ONU_largo.csv"
+DIR_DATOS <- Filter(function(d) file.exists(file.path(d, f_largo)),
+                    c("output/tablas", "../output/tablas", "."))
+if (length(DIR_DATOS) == 0) {
+  stop("No se encuentra '", f_largo, "' en output/tablas ni junto a app.R. ",
+       "Ejecuta primero el script 01 de proyecciones.")
 }
-largo    <- read_csv(f_largo, show_col_types = FALSE)
-hist_l   <- leer_opcional("historico_largo.csv")
-valid    <- leer_opcional("validacion_por_pais.csv")
-clusters <- leer_opcional("clusters.csv")
+DIR_DATOS <- DIR_DATOS[1]
+leer_opcional <- function(f) {
+  p <- file.path(DIR_DATOS, f)
+  if (file.exists(p)) read_csv(p, show_col_types = FALSE) else NULL
+}
+largo    <- read_csv(file.path(DIR_DATOS, f_largo), show_col_types = FALSE)
+hist_l   <- leer_opcional("04_historico_largo.csv")
+valid    <- leer_opcional("04_validacion_por_pais.csv")
+clusters <- leer_opcional("04_clusters.csv")
 if (!is.null(clusters) && !all(c("ISO3_code", "Cluster") %in% names(clusters))) clusters <- NULL
 
 if (!"ONU_en_IC95" %in% names(largo)) {
@@ -232,15 +238,14 @@ ui_criticos <- if (TIENE_RS) {
   )
 } else {
   nota(tags$b("Esta pestaña aún no tiene datos. "),
-       "El CSV no incluye la relación de soporte (RS). En el script de modelamiento define ",
-       tags$code("COL_P1564"), " y ", tags$code("COL_P65"),
-       " con las columnas de población 15-64 y 65+, vuelve a correrlo y copia los CSV aquí.")
+       "El CSV no incluye la relación de soporte (RS). Deja el CSV de población por edad de la ONU en ",
+       tags$code("data/raw"), ", ejecuta de nuevo el script 01 de proyecciones y recarga la app.")
 }
 
 ui_validacion <- if (!is.null(valid)) {
   tagList(
     fluidRow(
-      box(title = "Error de backtesting (2011-2023) por modelo", width = 7, status = "primary", maximizable = TRUE,
+      box(title = "Error de backtesting por modelo (orígenes 1990, 2000 y 2010)", width = 7, status = "primary", maximizable = TRUE,
           plotlyOutput("grafico_valid", height = "420px"),
           tags$p(class = "leyenda-lineas",
                  "MASE < 1: el modelo supera al pronóstico ingenuo de un paso. Cada punto es un país (escala logarítmica).")),
@@ -302,7 +307,7 @@ ui <- dashboardPage(
               tags$li(tags$b("Discrepancias: "), "dónde y cuánto se separa nuestro modelo de la ONU."),
               tags$li(tags$b("Puntos críticos: "), "año en que la relación de soporte cae bajo el umbral sostenible."),
               tags$li(tags$b("Mapa: "), "la transición demográfica país por país y año por año."),
-              tags$li(tags$b("Validación: "), "qué tan bien predijo cada modelo el período 2011-2023.")
+              tags$li(tags$b("Validación: "), "qué tan bien habría predicho cada modelo desde 1990, 2000 y 2010 hasta 2023.")
             )
           ),
           box(
