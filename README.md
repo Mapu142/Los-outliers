@@ -25,7 +25,7 @@ Principio rector: **una pregunta central bien respondida** vale más que muchos 
 | 0 | ETL, validación, parquet limpio, tema visual | ✅ Completa |
 | 1 | Pregunta central, plan analítico y datos externos | ⏳ En curso |
 | 2 | EDA | ⬜ |
-| 3 | Modelado e incertidumbre | ⬜ |
+| 3 | Modelado e incertidumbre | ✅ Completa |
 | 4 | Reporte Rmd | ⬜ |
 | 5 | App Shiny | ⬜ |
 | 6 | Cierre y revisión ética | ⬜ |
