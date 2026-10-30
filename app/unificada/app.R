@@ -163,11 +163,8 @@ ui <- dashboardPage(
       #--- 6. Puntos críticos ---
       tabItem(tabName = "criticos", mod_criticos_ui("crit")),
       
-      #--- 7. Mapa mundial ---
-      tabItem(tabName = "mapa",
-              box(title = "Mapa mundial animado", width = 12, status = "primary",
-                  tags$p("Próximo paso: combinar mapa de ", tags$code("app_ts.R"),
-                         " con LISA del script 06."))),
+      #--- 7. Mapa mundial---
+      tabItem(tabName = "mapa", mod_mapa_ui("mapa")),
       
       #--- 8. Validación ---
       tabItem(tabName = "validacion",
@@ -198,6 +195,7 @@ server <- function(input, output, session) {
   # en server <- function(...), junto a mod_series_server:
   mod_disc_server("disc",      DATOS_APP, main_input = input)
   mod_criticos_server("crit",  DATOS_APP, main_input = input)
+  mod_mapa_server("mapa", DATOS_APP, main_input = input)
   
   # Módulo PCA / estadios: alimenta las pestañas "Arquetipos (PCA)" y "Transiciones"
   if (!is.null(DATOS_PCA)) mod_pca_server("pca", datos = DATOS_PCA)
