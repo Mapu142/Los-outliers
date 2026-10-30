@@ -146,7 +146,7 @@ if (is.null(COL_SERIES) || anyNA(COL_SERIES)) {
 }
 
 #---- 6. Módulos --------------------------------------------------------------
-source("R/mod_pca_clusters.R",               encoding = "UTF-8")
+source("app/unificada/modules/mod_pca_clusters.R",               encoding = "UTF-8")
 source("app/unificada/modules/mod_series.R", encoding = "UTF-8")
 
 #---- 7. Lista de datos para pasar al server ---------------------------------

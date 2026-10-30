@@ -3,7 +3,8 @@
 # Módulo Shiny: PCA longitudinal y estadios demográficos · DataQuest 2026
 #
 # Uso dentro de la app del equipo:
-#   ui      ->  mod_pca_ui("pca")
+#   ui      ->  mod_pca_ui("pca")            (varianza, trayectorias, estadios)
+#               mod_transiciones_ui("pca")   (transiciones; mismo id)
 #   server  ->  mod_pca_server("pca", datos = cargar_datos_pca())
 #
 # El módulo NO recalcula nada: lee los archivos que genera R/02_pca_y_clustering.R
@@ -186,30 +187,33 @@ mod_pca_ui <- function(id) {
           DTOutput(ns("tabla_centroides"))
         )
       )
+    )
+  )
+}
+
+# UI de la pestaña de transiciones. Va aparte para poder ubicarla en su propio
+# menú (la app unificada tiene "Arquetipos (PCA)" y "Transiciones" separados).
+# Debe usar el mismo id que mod_pca_ui() y mod_pca_server().
+mod_transiciones_ui <- function(id) {
+  ns <- NS(id)
+  
+  sidebarLayout(
+    sidebarPanel(
+      width = 3,
+      sliderInput(ns("racha"), "Años mínimos en el nuevo estadio",
+                  min = 1, max = 8, value = 3, step = 1),
+      selectInput(ns("continente_t"), "Continente", choices = "Todos"),
+      ayuda("Una transición solo se cuenta si el país permanece al menos ese",
+            "número de años en el nuevo estadio. Con 1 año se cuentan todos",
+            "los cambios, incluidos los que se revierten."),
+      hr(),
+      h5("Colombia"),
+      uiOutput(ns("col_texto"))
     ),
-    
-    # 4. Transiciones -----------------------------------------------------------
-    tabPanel(
-      "Transiciones",
-      sidebarLayout(
-        sidebarPanel(
-          width = 3,
-          sliderInput(ns("racha"), "Años mínimos en el nuevo estadio",
-                      min = 1, max = 8, value = 3, step = 1),
-          selectInput(ns("continente_t"), "Continente", choices = "Todos"),
-          ayuda("Una transición solo se cuenta si el país permanece al menos ese",
-                "número de años en el nuevo estadio. Con 1 año se cuentan todos",
-                "los cambios, incluidos los que se revierten."),
-          hr(),
-          h5("Colombia"),
-          uiOutput(ns("col_texto"))
-        ),
-        mainPanel(
-          width = 9,
-          plotOutput(ns("hist_trans"), height = 320),
-          DTOutput(ns("tabla_trans"))
-        )
-      )
+    mainPanel(
+      width = 9,
+      plotOutput(ns("hist_trans"), height = 320),
+      DTOutput(ns("tabla_trans"))
     )
   )
 }
