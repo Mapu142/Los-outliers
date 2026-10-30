@@ -23,7 +23,110 @@ fontsize: 12pt
 geometry: margin=2.5cm
 ---
 
+
+```{r}
+# 1. Cargar la configuración compartida por el equipo
+source("R/config.R", encoding = "UTF-8")
+source("R/tema.R", encoding = "UTF-8")
+source("R/utils_datos.R", encoding = "UTF-8")
+```
+
 ```{r librerias, include=FALSE}
-library(dplyr) # para manejo de datos
+# 2. Cargar librerías del ecosistema y específicas para PCA
+library(tidyverse)
+library(arrow)       # REQUISITO: Para leer el archivo .parquet de tus compañeros
+library(FactoMineR)
+library(factoextra)
+```
+
+```{r}
+# 3. Leer los datos limpios unificados desde la ruta oficial de la Fase 0
+ruta_entrada <- file.path(CFG$dir_clean, CFG$f_parquet)
+df_wpp <- arrow::read_parquet(ruta_entrada)
+
+# 4. Aplicar los filtros obligatorios definidos en la configuración global
+df_pca_prep <- df_wpp %>%
+  # Filtrar por la ventana de proyecciones solicitada (2024 - 2100)
+  filter(Time >= 2024 & Time <= CFG$ultimo_anio_analisis) %>%
+  # Aplicar el filtro de población del equipo (Población >= 1 Millón)
+  filter(TPopulation1July >= CFG$umbral_universo_miles) %>%
+  # Seleccionar las variables demográficas puras para el PCA
+  select(ISO3_code, Time, Location, TFR, CBR, LEx, LE60, MedianAgePop) %>%
+  drop_na()
+```
+
+```{r}
+verificar(
+  condicion = (min(df_pca_prep$Time) == 2024 && max(df_pca_prep$Time) == CFG$ultimo_anio_analisis),
+  ok = "Ventana temporal correctamente acotada (2024 - 2100).",
+  error = "La ventana temporal de análisis no coincide con la configuración global.",
+  fatal = TRUE
+)
+
+verificar(
+  condicion = all(df_pca_prep$TFR > 0),
+  ok = "Variables demográficas sin valores incoherentes o negativos.",
+  error = "Se detectaron valores inconsistentes en las métricas de fecundidad.",
+  fatal = TRUE
+)
+```
+
+
+```{r}
+# Separar identificadores de la matriz numérica de entrenamiento
+id_datos   <- df_pca_prep[, c("ISO3_code", "Time", "Location")]
+matriz_num <- df_pca_prep[, c("TFR", "CBR", "LEx", "LE60", "MedianAgePop")]
+
+# Ejecutar el PCA con escalado obligatorio debido a la diferencia de unidades
+res_pca <- PCA(matriz_num, scale.unit = TRUE, graph = FALSE)
+cat("  [OK]    PCA calculado exitosamente.\n")
+```
+
+```{r}
+coordenadas_pca <- as.data.frame(res_pca$ind$coord[, 1:2])
+colnames(coordenadas_pca) <- c("PC1_Madurez", "PC2_Velocidad")
+
+# Recomponer el dataset estructural final
+df_final_pca <- cbind(id_datos, coordenadas_pca)
+
+# Guardar en la ruta limpia oficial usando las variables de configuración
+ruta_salida <- file.path(CFG$dir_clean, "wpp_resultados_pca_longitudinal.parquet")
+arrow::write_parquet(df_final_pca, ruta_salida)
+cat("  [OK]    Resultados del PCA exportados a:", ruta_salida, "\n")
+```
+
+```{r}
+#Construir el gráfico de variables extrayendo los datos del objeto PCA
+info_vars <- as.data.frame(res_pca$var$coord) %>% 
+  rownames_to_column(var = "Variable")
+
+grafico_variables <- ggplot(info_vars, aes(x = Dim.1, y = Dim.2)) +
+  # Círculo base unitario
+  annotate("path",
+           x = cos(seq(0, 2*pi, length.out = 100)),
+           y = sin(seq(0, 2*pi, length.out = 100)),
+           color = PAL$texto_suave, linewidth = 0.3, linetype = "dashed") +
+  # Flechas de las variables demográficas
+  geom_segment(aes(xend = Dim.1, yend = Dim.2, x = 0, y = 0),
+               arrow = arrow(length = unit(0.2, "cm")), color = PAL$acento, linewidth = 0.8) +
+  # Etiquetas de texto utilizando la función de formato del equipo
+  geom_text_repel(aes(label = Variable), color = PAL$texto, size = 4, fontface = "bold") +
+  # Líneas de origen cruzadas
+  geom_vline(xintercept = 0, color = PAL$texto_suave, linewidth = 0.2) +
+  geom_hline(yintercept = 0, color = PAL$texto_suave, linewidth = 0.2) +
+  # Personalización de títulos bajo los principios de diseño establecidos
+  labs(
+    title = "Círculo de Correlación Demográfica (PCA)",
+    subtitle = "Dimisión 1 (Madurez Demográfica) vs Dimensión 2 (Velocidad de Envejecimiento)",
+    x = "Componente Principal 1",
+    y = "Componente Principal 2",
+    caption = "Fuente: Cálculos propios con datos del UN WPP 2024. Filtro: Población >= 1M."
+  ) +
+  # Aplicar el tema obligatorio del equipo
+  theme_dataquest(rejilla = "xy")
+
+# 3. Guardar la figura de manera automatizada en la ruta oficial
+guardar_fig(grafico_variables, "01_pca_circulo_variables")
+
 ```
 
