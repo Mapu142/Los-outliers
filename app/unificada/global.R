@@ -1,28 +1,37 @@
 #==============================================================================
 # app/unificada/global.R
 # Carga ÚNICA de datos y funciones compartidas para la app unificada.
-# Se ejecuta UNA VEZ al arrancar la app (antes de cualquier usuario).
+# Se ejecuta UNA VEZ al arrancar la app.
 #==============================================================================
 
 #---- 0. Paquetes -------------------------------------------------------------
 paquetes <- c("shiny", "bs4Dash", "dplyr", "tidyr", "ggplot2", "plotly",
-              "DT", "readr", "arrow", "sf", "sf", "scales", "glue",
+              "DT", "readr", "arrow", "sf", "scales", "glue",
               "ggrepel", "shinyjs")
 faltan <- setdiff(paquetes, rownames(installed.packages()))
 if (length(faltan) > 0) install.packages(faltan)
 invisible(lapply(paquetes, library, character.only = TRUE))
 
-#---- 1. Configuración del proyecto ------------------------------------------
-# La app se ejecuta desde la raíz del proyecto (.Rproj abierto)
-if (!file.exists("R/config.R")) {
-  stop("Abre el proyecto (.Rproj) o fija setwd() en la raíz.")
+#---- 1. Raíz del proyecto -----------------------------------------------------
+# shiny::runApp("app/unificada") cambia el directorio de trabajo a la carpeta
+# de la app, así que "R/config.R" no se encontraría. Se sube hasta hallar la raíz.
+.buscar_raiz <- function() {
+  d <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
+  for (i in 1:5) {
+    if (file.exists(file.path(d, "R", "config.R"))) return(d)
+    d <- dirname(d)
+  }
+  stop("No encuentro la raíz del proyecto (carpeta con R/config.R). ",
+       "Abre el .Rproj y ejecuta shiny::runApp('app/unificada').", call. = FALSE)
 }
-source("R/config.R",   encoding = "UTF-8")
+RAIZ <- .buscar_raiz()
+setwd(RAIZ)   # a partir de aquí todas las rutas relativas parten de la raíz
+
+source("R/config.R",      encoding = "UTF-8")
 source("R/utils_datos.R", encoding = "UTF-8")
-source("R/tema.R",     encoding = "UTF-8")
+source("R/tema.R",        encoding = "UTF-8")
 
 #---- 2. Rutas a los archivos de entrada -------------------------------------
-# Series de tiempo (script 10 + 11)
 DIR_TABLAS <- CFG$dir_tablas
 DIR_CLEAN  <- CFG$dir_clean
 
@@ -49,47 +58,58 @@ f <- list(
   dane         = file.path(DIR_CLEAN,  "dane_estructura_edad.rds")
 )
 
-# Verificación: todos los archivos deben existir
-f_vec <- unlist(f)
-faltan_archivos <- f_vec[!file.exists(f_vec)]
+# Obligatorios para que la app arranque HOY (series + PCA).
+# El resto es opcional: si falta, queda en NULL y solo avisa en la consola.
+OBLIGATORIOS <- c("largo", "hist", "pca_coord", "pca_arq",
+                  "pca_eig", "pca_vars", "pca_cent")
 
-if (length(faltan_archivos) > 0) {
-  stop("Faltan archivos para la app unificada:\n  ",
-       paste(basename(faltan_archivos), collapse = "\n  "),
-       "\nEjecuta primero los scripts 00-11 y 02_PCA.", call. = FALSE)
+f_vec <- unlist(f)
+faltan_obl <- f_vec[names(f_vec) %in% OBLIGATORIOS & !file.exists(f_vec)]
+if (length(faltan_obl) > 0) {
+  stop("Faltan archivos obligatorios para la app:\n  ",
+       paste(faltan_obl, collapse = "\n  "),
+       "\nRevisa los nombres/rutas en la sección 2 de global.R ",
+       "o ejecuta antes los scripts que los generan.", call. = FALSE)
 }
+faltan_opc <- f_vec[!names(f_vec) %in% OBLIGATORIOS & !file.exists(f_vec)]
+if (length(faltan_opc) > 0) {
+  message("Aviso: archivos opcionales no encontrados (esas pestañas quedarán sin datos):\n  ",
+          paste(basename(faltan_opc), collapse = "\n  "))
+}
+
+leer_csv_op <- function(p) if (file.exists(p)) readr::read_csv(p, show_col_types = FALSE) else NULL
+leer_pq_op  <- function(p) if (file.exists(p)) as.data.frame(arrow::read_parquet(p)) else NULL
+leer_rds_op <- function(p) if (file.exists(p)) readRDS(p) else NULL
 
 #---- 3. Carga de datos (una sola vez) ---------------------------------------
 message("Cargando datos de la app unificada...")
 
 # --- Series de tiempo ---
-ts_largo   <- readr::read_csv(f$largo,    show_col_types = FALSE)
-ts_hist    <- readr::read_csv(f$hist,     show_col_types = FALSE)
-ts_valid   <- readr::read_csv(f$valid,    show_col_types = FALSE)
-ts_crit    <- readr::read_csv(f$criticos, show_col_types = FALSE)
-ts_d16     <- readr::read_csv(f$d16,      show_col_types = FALSE)
-ts_triang  <- readr::read_csv(f$triang,   show_col_types = FALSE)
-ts_disc    <- readr::read_csv(f$resumen_disc, show_col_types = FALSE)
+ts_largo  <- readr::read_csv(f$largo, show_col_types = FALSE)
+ts_hist   <- readr::read_csv(f$hist,  show_col_types = FALSE)
+ts_valid  <- leer_csv_op(f$valid)
+ts_crit   <- leer_csv_op(f$criticos)
+ts_d16    <- leer_csv_op(f$d16)
+ts_triang <- leer_csv_op(f$triang)
+ts_disc   <- leer_csv_op(f$resumen_disc)
 
 # --- PCA ---
-pca_coord  <- as.data.frame(arrow::read_parquet(f$pca_coord))
-pca_arq    <- as.data.frame(arrow::read_parquet(f$pca_arq))
-pca_trans  <- as.data.frame(arrow::read_parquet(f$pca_trans))
-pca_eig    <- read.csv(f$pca_eig)
-pca_vars   <- read.csv(f$pca_vars)
-pca_cent   <- read.csv(f$pca_cent, check.names = FALSE)
+pca_coord <- as.data.frame(arrow::read_parquet(f$pca_coord))
+pca_arq   <- as.data.frame(arrow::read_parquet(f$pca_arq))
+pca_trans <- leer_pq_op(f$pca_trans)
+pca_eig   <- read.csv(f$pca_eig)
+pca_vars  <- read.csv(f$pca_vars)
+pca_cent  <- read.csv(f$pca_cent, check.names = FALSE)
 names(pca_cent)[1] <- "Arquetipo"
 
-# --- Espacial ---
-mundo_geom <- readRDS(f$mundo_geom)
-lisa_tab   <- readr::read_csv(f$lisa, show_col_types = FALSE)
+# --- Espacial y DANE ---
+mundo_geom <- leer_rds_op(f$mundo_geom)
+lisa_tab   <- leer_csv_op(f$lisa)
+dane_ind   <- leer_rds_op(f$dane)
 
-# --- DANE ---
-dane_ind   <- readRDS(f$dane)
-
-message("  ✓ Series de tiempo: ", format(nrow(ts_largo), big.mark = ","), " filas")
-message("  ✓ PCA: ", nrow(pca_coord), " país-años")
-message("  ✓ Geometrías: ", nrow(mundo_geom), " países")
+message("  OK Series de tiempo: ", format(nrow(ts_largo), big.mark = ","), " filas")
+message("  OK PCA: ", nrow(pca_coord), " país-años")
+if (!is.null(mundo_geom)) message("  OK Geometrías: ", nrow(mundo_geom), " países")
 
 #---- 4. Tabla maestra de nombres de países ----------------------------------
 nombres_paises <- ts_hist |>
@@ -110,42 +130,33 @@ ETIQ_VAR <- c(
 
 VARS_DISP <- intersect(names(ETIQ_VAR), unique(ts_largo$Variable))
 
-ANIO_MIN  <- min(ts_largo$Time)
-ANIO_MAX  <- max(ts_largo$Time)
+ANIO_MIN   <- min(ts_hist$Time)
+ANIO_MAX   <- max(ts_largo$Time)
 ANIO_CORTE <- 2023L  # último año de estimación
 
-# Paleta de Okabe-Ito (ya en PAL$okabe_ito de tema.R)
-COL_SERIES <- unname(PAL$okabe_ito[c("azul", "bermellon", "verde",
-                                     "naranja", "purpura", "celeste",
-                                     "negro", "amarillo")])
+# Paleta Okabe-Ito (de tema.R) con respaldo por si cambian los nombres
+COL_SERIES <- tryCatch(
+  unname(PAL$okabe_ito[c("azul", "bermellon", "verde", "naranja",
+                         "purpura", "celeste", "negro", "amarillo")]),
+  error = function(e) NULL
+)
+if (is.null(COL_SERIES) || anyNA(COL_SERIES)) {
+  COL_SERIES <- c("#0072B2", "#D55E00", "#009E73", "#E69F00",
+                  "#CC79A7", "#56B4E9", "#000000", "#F0E442")
+}
 
-#---- 6. Módulo del PCA (ya existe) ------------------------------------------
-source("R/mod_pca_clusters.R", encoding = "UTF-8")
+#---- 6. Módulos --------------------------------------------------------------
+source("R/mod_pca_clusters.R",               encoding = "UTF-8")
+source("app/unificada/modules/mod_series.R", encoding = "UTF-8")
 
 #---- 7. Lista de datos para pasar al server ---------------------------------
 DATOS_APP <- list(
-  # Series
-  ts_largo   = ts_largo,
-  ts_hist    = ts_hist,
-  ts_valid   = ts_valid,
-  ts_crit    = ts_crit,
-  ts_d16     = ts_d16,
-  ts_triang  = ts_triang,
-  ts_disc    = ts_disc,
-  # PCA
-  pca_coord  = pca_coord,
-  pca_arq    = pca_arq,
-  pca_trans  = pca_trans,
-  pca_eig    = pca_eig,
-  pca_vars   = pca_vars,
-  pca_cent   = pca_cent,
-  # Espacial
-  mundo_geom = mundo_geom,
-  lisa_tab   = lisa_tab,
-  # DANE
-  dane_ind   = dane_ind,
-  # Nombres
-  nombres    = nombres_paises
+  ts_largo = ts_largo, ts_hist = ts_hist, ts_valid = ts_valid,
+  ts_crit = ts_crit, ts_d16 = ts_d16, ts_triang = ts_triang, ts_disc = ts_disc,
+  pca_coord = pca_coord, pca_arq = pca_arq, pca_trans = pca_trans,
+  pca_eig = pca_eig, pca_vars = pca_vars, pca_cent = pca_cent,
+  mundo_geom = mundo_geom, lisa_tab = lisa_tab, dane_ind = dane_ind,
+  nombres = nombres_paises
 )
 
-message("✓ App unificada lista para arrancar.")
+message("App unificada lista para arrancar.")
