@@ -149,9 +149,11 @@ tema_mapa <- function(barra = TRUE) {
                    axis.line = ggplot2::element_blank(),
                    axis.ticks = ggplot2::element_blank(),
                    legend.position = "bottom",
-                   legend.justification = "left")
+                   legend.justification = "left",
+                   plot.title = ggplot2::element_text(face = "bold", size = ggplot2::rel(1.25)))
   if (barra) {
-    t <- t + ggplot2::theme(legend.key.width = ggplot2::unit(3.2, "cm"),
+    # 2.2 cm x 5 = barra de ~11 cm: cabe en figuras de 8 pulgadas (con 3.2 cm se cortaba)
+    t <- t + ggplot2::theme(legend.key.width = ggplot2::unit(2.2, "cm"),
                             legend.key.height = ggplot2::unit(0.35, "cm"))
   }
   t

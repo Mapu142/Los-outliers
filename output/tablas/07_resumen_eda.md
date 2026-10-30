@@ -1,4 +1,4 @@
-### EDA · corrida del 2026-10-29 06:53
+### EDA · corrida del 2026-10-30 08:52
 
 - Universo: 161 países (>= 1 millón de habitantes en 2023). Todo es exploratorio.
 
@@ -35,51 +35,51 @@
 
 | a | b | rho | anio |
 |---|---|---|---|
-| TFR | NRR | 0.998 |  |
-| Mortalidad infantil | Mortalidad < 5 años | 0.997 |  |
-| Edad mediana | Tasa de natalidad | -0.977 |  |
-| Tasa de natalidad | Crecimiento natural | 0.977 |  |
-| TFR | Tasa de natalidad | 0.976 |  |
-| Edad mediana | Crecimiento natural | -0.975 |  |
-| NRR | Tasa de natalidad | 0.973 |  |
-| Esp. de vida al nacer | Esp. de vida a los 60 | 0.968 |  |
-| NRR | Crecimiento natural | 0.942 |  |
-| TFR | Crecimiento natural | 0.94 |  |
-| Esp. de vida al nacer | Mortalidad < 5 años | -0.934 |  |
-| TFR | Edad mediana | -0.932 |  |
-| Esp. de vida al nacer | Mortalidad infantil | -0.93 |  |
-| NRR | Edad mediana | -0.928 |  |
-| Crecimiento natural | Índice vital (log) | 0.923 |  |
-| Edad mediana | Mortalidad < 5 años | -0.92 |  |
-| Tasa de natalidad | Mortalidad < 5 años | 0.917 |  |
-| Edad mediana | Mortalidad infantil | -0.913 |  |
-| Tasa de natalidad | Mortalidad infantil | 0.911 |  |
-| Mortalidad infantil | Mortalidad < 5 años | 0.999 |  |
-| TFR | NRR | 0.997 |  |
-| Esp. de vida al nacer | Esp. de vida a los 60 | 0.99 |  |
-| Edad mediana | Tasa de natalidad | -0.99 |  |
-| Crecimiento natural | Crecimiento poblacional | 0.988 |  |
-| Edad mediana | Crecimiento natural | -0.981 |  |
-| TFR | Tasa de natalidad | 0.98 |  |
-| NRR | Tasa de natalidad | 0.977 |  |
-| Crecimiento natural | Índice vital (log) | 0.974 |  |
-| Tasa de natalidad | Crecimiento natural | 0.968 |  |
-| Crecimiento poblacional | Índice vital (log) | 0.965 |  |
-| Edad mediana | Crecimiento poblacional | -0.963 |  |
-| TFR | Edad mediana | -0.955 |  |
-| NRR | Edad mediana | -0.953 |  |
-| Tasa de natalidad | Crecimiento poblacional | 0.948 |  |
-| Tasa de mortalidad | Índice vital (log) | -0.947 |  |
-| Edad mediana | Índice vital (log) | -0.942 |  |
-| Esp. de vida al nacer | Mortalidad infantil | -0.934 |  |
-| Esp. de vida al nacer | Mortalidad < 5 años | -0.934 |  |
-| NRR | Crecimiento natural | 0.931 |  |
-| TFR | Crecimiento natural | 0.928 |  |
-| Esp. de vida a los 60 | Mortalidad infantil | -0.921 |  |
-| Esp. de vida a los 60 | Mortalidad < 5 años | -0.92 |  |
-| Tasa de natalidad | Índice vital (log) | 0.916 |  |
-| NRR | Crecimiento poblacional | 0.905 |  |
-| TFR | Crecimiento poblacional | 0.901 |  |
+| TFR | NRR | 0.998 | 2023 |
+| Mortalidad infantil | Mortalidad < 5 años | 0.997 | 2023 |
+| Edad mediana | Tasa de natalidad | -0.977 | 2023 |
+| Tasa de natalidad | Crecimiento natural | 0.977 | 2023 |
+| TFR | Tasa de natalidad | 0.976 | 2023 |
+| Edad mediana | Crecimiento natural | -0.975 | 2023 |
+| NRR | Tasa de natalidad | 0.973 | 2023 |
+| Esp. de vida al nacer | Esp. de vida a los 60 | 0.968 | 2023 |
+| NRR | Crecimiento natural | 0.942 | 2023 |
+| TFR | Crecimiento natural | 0.94 | 2023 |
+| Esp. de vida al nacer | Mortalidad < 5 años | -0.934 | 2023 |
+| TFR | Edad mediana | -0.932 | 2023 |
+| Esp. de vida al nacer | Mortalidad infantil | -0.93 | 2023 |
+| NRR | Edad mediana | -0.928 | 2023 |
+| Crecimiento natural | Índice vital (log) | 0.923 | 2023 |
+| Edad mediana | Mortalidad < 5 años | -0.92 | 2023 |
+| Tasa de natalidad | Mortalidad < 5 años | 0.917 | 2023 |
+| Edad mediana | Mortalidad infantil | -0.913 | 2023 |
+| Tasa de natalidad | Mortalidad infantil | 0.911 | 2023 |
+| Mortalidad infantil | Mortalidad < 5 años | 0.999 | 2050 |
+| TFR | NRR | 0.997 | 2050 |
+| Esp. de vida al nacer | Esp. de vida a los 60 | 0.99 | 2050 |
+| Edad mediana | Tasa de natalidad | -0.99 | 2050 |
+| Crecimiento natural | Crecimiento poblacional | 0.988 | 2050 |
+| Edad mediana | Crecimiento natural | -0.981 | 2050 |
+| TFR | Tasa de natalidad | 0.98 | 2050 |
+| NRR | Tasa de natalidad | 0.977 | 2050 |
+| Crecimiento natural | Índice vital (log) | 0.974 | 2050 |
+| Tasa de natalidad | Crecimiento natural | 0.968 | 2050 |
+| Crecimiento poblacional | Índice vital (log) | 0.965 | 2050 |
+| Edad mediana | Crecimiento poblacional | -0.963 | 2050 |
+| TFR | Edad mediana | -0.955 | 2050 |
+| NRR | Edad mediana | -0.953 | 2050 |
+| Tasa de natalidad | Crecimiento poblacional | 0.948 | 2050 |
+| Tasa de mortalidad | Índice vital (log) | -0.947 | 2050 |
+| Edad mediana | Índice vital (log) | -0.942 | 2050 |
+| Esp. de vida al nacer | Mortalidad infantil | -0.934 | 2050 |
+| Esp. de vida al nacer | Mortalidad < 5 años | -0.934 | 2050 |
+| NRR | Crecimiento natural | 0.931 | 2050 |
+| TFR | Crecimiento natural | 0.928 | 2050 |
+| Esp. de vida a los 60 | Mortalidad infantil | -0.921 | 2050 |
+| Esp. de vida a los 60 | Mortalidad < 5 años | -0.92 | 2050 |
+| Tasa de natalidad | Índice vital (log) | 0.916 | 2050 |
+| NRR | Crecimiento poblacional | 0.905 | 2050 |
+| TFR | Crecimiento poblacional | 0.901 | 2050 |
 
 **Años con más países en caída de la esperanza de vida** (>= 1 año):
 

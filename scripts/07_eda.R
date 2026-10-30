@@ -91,6 +91,13 @@ region_de <- function(loc_id) {
 }
 paises_ref <- dbGetQuery(con, "SELECT DISTINCT LocID, ISO3_code AS iso3, Location FROM wpp")
 regiones_pais <- paises_ref |> mutate(region = vapply(LocID, region_de, character(1)))
+# Respaldo (D30): la jerarquía de ParentID no resolvió estos 5 países, que forman la región
+# "Northern America" en la clasificación geográfica de la ONU. Solo se rellenan los NA.
+REGION_MANUAL <- c(CAN = "Northern America", USA = "Northern America", BMU = "Northern America",
+                   SPM = "Northern America", GRL = "Northern America")
+sin_reg <- is.na(regiones_pais$region) & regiones_pais$iso3 %in% names(REGION_MANUAL)
+regiones_pais$region[sin_reg] <- unname(REGION_MANUAL[regiones_pais$iso3[sin_reg]])
+cat("Regiones asignadas manualmente (respaldo):", sum(sin_reg), "países\n")
 verificar(!anyNA(regiones_pais$region),
           "Los 237 países tienen región geográfica asignada.",
           paste0("Países sin región: ", paste(regiones_pais$iso3[is.na(regiones_pais$region)], collapse = ", "),
@@ -131,7 +138,7 @@ ref_tfr <- tibble(etiqueta = factor(ETQ_VAR3[1], levels = ETQ_VAR3), y = CFG$tfr
 p1 <- ggplot(reg_long, aes(Time, valor, colour = Location, linetype = mundo, linewidth = mundo)) +
   capa_proyeccion(etiquetas = FALSE) +
   geom_hline(data = ref_tfr, aes(yintercept = y), linetype = "dotted", colour = PAL$acento,
-             linewidth = 0.5, inherit.aes = FALSE) +
+             linewidth = 0.5) +
   geom_line(lineend = "round") +
   facet_wrap(~ etiqueta, ncol = 1, scales = "free_y") +
   scale_colour_manual(values = COL_REG, labels = NOMBRES_ES, name = NULL) +
@@ -140,7 +147,7 @@ p1 <- ggplot(reg_long, aes(Time, valor, colour = Location, linetype = mundo, lin
   scale_x_continuous(breaks = seq(1950, 2100, 25), expand = expansion(mult = c(0.01, 0.02))) +
   scale_y_continuous(labels = fmt_num(0.1)) +
   guides(colour = guide_legend(nrow = 2, byrow = TRUE)) +
-  labs(title = "Las regiones convergen, pero a ritmos muy distintos",
+  labs(title = "La fecundidad converge entre regiones; la edad mediana, no",
        subtitle = paste0("Valores de las regiones geográficas de la ONU (referencia). Línea punteada naranja: ",
                          "reemplazo (2,1 hijos por mujer).\nZona sombreada: proyección (variante Medium)."),
        x = NULL, y = NULL, caption = CAP_WPP) +
@@ -176,7 +183,7 @@ p2 <- ggplot(tr_df, aes(tfr, lex)) +
   scale_colour_manual(values = PAL$region, labels = NOMBRES_ES, name = NULL, na.value = "grey60") +
   scale_x_continuous(labels = fmt_num(0.1)) +
   guides(colour = guide_legend(nrow = 2, byrow = TRUE, override.aes = list(size = 3.5))) +
-  labs(title = "La transición demográfica: del rincón inferior derecho al superior izquierdo",
+  labs(title = "Transición demográfica: fecundidad frente a esperanza de vida",
        subtitle = "Cada burbuja es un país; su tamaño es la población. Línea punteada: reemplazo (2,1 hijos por mujer).",
        x = "Hijos por mujer (TFR)", y = "Esperanza de vida al nacer (años)",
        caption = paste0(CAP_WPP, " ", length(universo), " países con >= 1 millón de habitantes.")) +
@@ -202,6 +209,17 @@ cat(sprintf("Primer año con >= 50 %% de la población viviendo bajo el reemplaz
 cat(sprintf("Colombia baja del reemplazo (TFR < 2,1) en: %s\n", col_reemp))
 write.csv(reemp, file.path(CFG$dir_tablas, "07_reemplazo.csv"), row.names = FALSE)
 
+# Los saltos de la serie de población (hacia 1990 y 2020) deberían corresponder a países muy
+# grandes que cruzan el reemplazo ese año: se comprueba en lugar de suponerlo.
+cruce_reemp <- panel_u |> group_by(iso3, Location) |>
+  summarise(pob_2023 = pob_miles[Time == CFG$ultimo_anio_estimado],
+            anio_bajo_reemplazo = primer_anio(Time, tfr < CFG$tfr_reemplazo), .groups = "drop") |>
+  arrange(desc(pob_2023)) |> head(12) |>
+  mutate(pob_2023 = round(pob_2023))
+cat("\nAño en que los 12 países más poblados bajan del reemplazo (TFR < 2,1):\n")
+ver(cruce_reemp)
+write.csv(cruce_reemp, file.path(CFG$dir_tablas, "07_reemplazo_paises_grandes.csv"), row.names = FALSE)
+
 NOM_REEMP <- c("pct_paises" = "Países con TFR < 2,1", "pct_pob" = "Población que vive en países con TFR < 2,1",
                "pct_paises_nrr" = "Países con NRR < 1")
 reemp_long <- reemp |> pivot_longer(-Time, names_to = "serie", values_to = "pct") |>
@@ -214,7 +232,7 @@ p3 <- ggplot(reemp_long, aes(Time, pct, colour = serie)) +
                       name = NULL) +
   scale_x_continuous(breaks = seq(1950, 2100, 25), expand = expansion(mult = c(0.01, 0.02))) +
   scale_y_continuous(limits = c(0, 100), labels = fmt_num(1, " %"), expand = expansion(mult = c(0, 0.04))) +
-  labs(title = "Cada vez más países, y más gente, viven bajo el nivel de reemplazo",
+  labs(title = "Países y población bajo el nivel de reemplazo",
        subtitle = paste0("La mitad de los países baja del reemplazo en ", anio_mitad_paises,
                          "; la mitad de la población, en ", anio_mitad_pob, ". Colombia baja en ", col_reemp, ".\n",
                          "NRR < 1: cada generación de mujeres no se reemplaza a sí misma (incluye mortalidad)."),
@@ -244,7 +262,10 @@ pares_redund <- function(R, umbral) {
     arrange(desc(abs(rho)))
 }
 R_lista <- lapply(setNames(ANIOS_CORR, ANIOS_CORR), matriz_cor)
-pares_all <- bind_rows(lapply(names(R_lista), function(a) pares_redund(R_lista[[a]], UMBRAL_REDUND) |> mutate(anio = as.integer(a))))
+# OJO: dentro de mutate(), `a` es la columna de pares_redund(), no el argumento; por eso `anio` salía NA.
+pares_all <- bind_rows(lapply(names(R_lista), function(an) {
+  pares_redund(R_lista[[an]], UMBRAL_REDUND) |> mutate(anio = as.integer(an))
+}))
 cat("Pares con |rho| >= ", UMBRAL_REDUND, " (candidatos a redundancia):\n", sep = "")
 ver(pares_all |> mutate(a = ETQ_COR[a], b = ETQ_COR[b]))
 write.csv(pares_all, file.path(CFG$dir_tablas, "07_pares_redundantes.csv"), row.names = FALSE)
@@ -265,7 +286,7 @@ p4 <- ggplot(Rl, aes(v1, v2, fill = rho)) +
                        limits = c(-1, 1), name = "Spearman") +
   scale_x_discrete(labels = function(x) unname(ETQ_COR[x])) +
   scale_y_discrete(labels = function(x) unname(ETQ_COR[x])) +
-  labs(title = "Muchos indicadores demográficos cuentan la misma historia",
+  labs(title = "Correlación entre indicadores demográficos (2023)",
        subtitle = paste0("Correlación de Spearman entre indicadores, 2023, ", length(universo),
                          " países. Ordenados por similitud: los bloques indican redundancia."),
        x = NULL, y = NULL, caption = CAP_WPP) +
@@ -273,16 +294,21 @@ p4 <- ggplot(Rl, aes(v1, v2, fill = rho)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "right")
 print(p4); guardar_fig(p4, "07_correlaciones_2023", ancho = 9.5, alto = 8)
 
-# Conteo de cuántos grupos independientes quedan con el umbral (componentes conexas del grafo de redundancia)
+# Grupos de redundancia con enlace promedio: dentro de cada grupo la |rho| MEDIA es >= umbral.
+# (La versión anterior, por componentes conexas, encadenaba casi todo en un solo bloque porque
+#  basta una pareja con |rho| >= 0.9 para unir dos indicadores.)
 grupos_redund <- function(R, umbral) {
-  n <- ncol(R); comp <- seq_len(n)
-  for (it in seq_len(n)) for (i in seq_len(n)) for (j in seq_len(n)) {
-    if (abs(R[i, j]) >= umbral && comp[i] != comp[j]) comp[comp == max(comp[i], comp[j])] <- min(comp[i], comp[j])
-  }
-  split(colnames(R), comp)
+  hc <- hclust(as.dist(1 - abs(R)), method = "average")
+  split(colnames(R), cutree(hc, h = 1 - umbral))
 }
-cat("\nGrupos de indicadores redundantes (2023, |rho| >= ", UMBRAL_REDUND, "):\n", sep = "")
-for (g in grupos_redund(R23, UMBRAL_REDUND)) cat("  -", paste(ETQ_COR[g], collapse = " | "), "\n")
+for (an in names(R_lista)) {
+  cat("\nGrupos de indicadores redundantes (", an, ", |rho| medio >= ", UMBRAL_REDUND, "):\n", sep = "")
+  for (g in grupos_redund(R_lista[[an]], UMBRAL_REDUND)) cat("  -", paste(ETQ_COR[g], collapse = " | "), "\n")
+}
+# Máxima |rho| de cada indicador con cualquier otro (2023): ayuda a elegir representantes (D10)
+cat("\n|rho| máxima de cada indicador con otro (2023):\n")
+ver(tibble(indicador = ETQ_COR[colnames(R23)],
+           rho_max_abs = round(apply(abs(R23) - diag(2, ncol(R23)), 2, max), 3)) |> arrange(desc(rho_max_abs)))
 
 
 # ---- 6. Quiebres históricos de la esperanza de vida (Paso 10) -----------------
@@ -311,7 +337,7 @@ p5 <- ggplot(n_caidas, aes(Time)) +
   geom_col(aes(y = n_fuerte), fill = PAL$acento, width = 0.85) +
   scale_x_continuous(breaks = seq(1950, 2020, 10), expand = expansion(mult = c(0.01, 0.01))) +
   scale_y_continuous(expand = expansion(mult = c(0, 0.08))) +
-  labs(title = "Pocos años concentran las caídas de la esperanza de vida",
+  labs(title = "Las caídas masivas de la esperanza de vida se concentran en 2020 y 2021",
        subtitle = paste0("Países cuya esperanza de vida cae al menos ", abs(UMBRAL_CAIDA_LEX), " año (azul claro) o ",
                          abs(UMBRAL_CAIDA_FUER), " años (naranja oscuro) en un solo año. Solo estimaciones."),
        x = NULL, y = "Número de países",
@@ -339,8 +365,8 @@ col_mig <- panel |> filter(iso3 == "COL")
 pk_max <- col_mig |> filter(Time <= CFG$ultimo_anio_estimado) |> slice_max(migr_neta, n = 1, with_ties = FALSE)
 pk_min <- col_mig |> filter(Time <= CFG$ultimo_anio_estimado) |> slice_min(migr_neta, n = 1, with_ties = FALSE)
 cat(sprintf("\nColombia: máximo de migración neta estimada %s miles en %d; mínimo %s miles en %d.\n",
-            format(round(pk_max$migr_neta), big.mark = "."), pk_max$Time,
-            format(round(pk_min$migr_neta), big.mark = "."), pk_min$Time))
+            format(round(pk_max$migr_neta), big.mark = CFG$sep_miles, decimal.mark = CFG$sep_decimal), pk_max$Time,
+            format(round(pk_min$migr_neta), big.mark = CFG$sep_miles, decimal.mark = CFG$sep_decimal), pk_min$Time))
 cat("Colombia, mayores picos respecto a su tendencia:\n")
 ver(picos |> filter(iso3 == "COL") |> arrange(desc(abs(pico))) |> head(5) |>
       transmute(Time, cnmr = round(cnmr, 1), base = round(base, 1), pico = round(pico, 1)))
@@ -350,17 +376,18 @@ p6 <- ggplot(col_mig, aes(Time, migr_neta)) +
   geom_hline(yintercept = 0, colour = PAL$texto_suave, linewidth = 0.4) +
   geom_line(colour = PAL$estimacion, linewidth = 1.2, lineend = "round") +
   geom_point(data = pk_max, colour = PAL$acento, size = 3) +
-  geom_text(data = pk_max, aes(label = paste0("Máximo: ", format(round(migr_neta), big.mark = CFG$sep_miles),
+  geom_text(data = pk_max, aes(label = paste0("Máximo: ", format(round(migr_neta), big.mark = CFG$sep_miles, decimal.mark = CFG$sep_decimal),
                                               " mil (", Time, ")")),
             colour = PAL$acento, fontface = "bold", size = 3.4, hjust = 1.05, vjust = -0.6) +
   geom_point(data = pk_min, colour = PAL$acento, size = 3) +
-  geom_text(data = pk_min, aes(label = paste0("Mínimo: ", format(round(migr_neta), big.mark = CFG$sep_miles),
+  geom_text(data = pk_min, aes(label = paste0("Mínimo: ", format(round(migr_neta), big.mark = CFG$sep_miles, decimal.mark = CFG$sep_decimal),
                                               " mil (", Time, ")")),
             colour = PAL$acento, fontface = "bold", size = 3.4, hjust = -0.05, vjust = 1.6) +
   scale_x_continuous(breaks = seq(1950, 2100, 25), expand = expansion(mult = c(0.01, 0.02))) +
   scale_y_continuous(labels = fmt_num(1)) +
-  labs(title = "Colombia: de país de emigración a receptor, según la ONU",
-       subtitle = "Migración neta anual estimada (miles de personas; positiva = entran más de las que salen).",
+  labs(title = "Colombia: migración neta estimada y proyectada por la ONU",
+       subtitle = paste0("Miles de personas por año (positiva = entran más de las que salen). ",
+                         "Pico de ", format(round(pk_max$migr_neta)), " mil en ", pk_max$Time, "; la proyección vuelve a ~0."),
        x = NULL, y = "Miles de personas por año", caption = CAP_WPP) +
   theme_dataquest()
 print(p6); guardar_fig(p6, "07_colombia_migracion_neta", ancho = 9.5, alto = 5.2)
@@ -378,6 +405,9 @@ ctx <- bind_rows(col_ser, lac_ser, mun_ser) |> mutate(serie = factor(serie, leve
 ctx_long <- ctx |> pivot_longer(c(edad_mediana, tfr, lex), names_to = "variable", values_to = "valor") |>
   mutate(etiqueta = factor(recode(variable, tfr = ETQ_VAR3[1], lex = ETQ_VAR3[2], edad_mediana = ETQ_VAR3[3]),
                            levels = c(ETQ_VAR3[3], ETQ_VAR3[1], ETQ_VAR3[2])))
+gan_edad <- ctx |> filter(Time %in% c(CFG$ultimo_anio_estimado, CFG$ultimo_anio_analisis)) |>
+  select(serie, Time, edad_mediana) |> pivot_wider(names_from = Time, values_from = edad_mediana)
+gan_txt <- paste0(gan_edad$serie, " +", round(gan_edad[[3]] - gan_edad[[2]], 1), collapse = "; ")
 p7 <- ggplot(ctx_long, aes(Time, valor, colour = serie, linewidth = serie, linetype = serie)) +
   capa_proyeccion(etiquetas = FALSE) +
   geom_line(lineend = "round") +
@@ -389,8 +419,9 @@ p7 <- ggplot(ctx_long, aes(Time, valor, colour = serie, linewidth = serie, linet
                         guide = "none") +
   scale_x_continuous(breaks = seq(1950, 2100, 25), expand = expansion(mult = c(0.01, 0.02))) +
   scale_y_continuous(labels = fmt_num(0.1)) +
-  labs(title = "Colombia envejece más rápido que el mundo y que su región",
-       subtitle = "Colombia (ONU), América Latina y el Caribe y el mundo (agregados de la ONU, solo referencia).\nZona sombreada: proyección (variante Medium).",
+  labs(title = "Colombia gana más edad mediana que su región y que el mundo",
+       subtitle = paste0("Edad mediana 2023 -> 2100: ", gan_txt, " (agregados de la ONU, solo referencia).\n",
+                         "Zona sombreada: proyección (variante Medium)."),
        x = NULL, y = NULL, caption = CAP_WPP) +
   theme_dataquest()
 print(p7); guardar_fig(p7, "07_colombia_en_contexto", ancho = 9.5, alto = 10)

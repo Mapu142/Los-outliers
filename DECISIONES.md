@@ -367,14 +367,14 @@ Las edades de jubilación vigentes en Colombia (57 mujeres y 62 hombres, según 
 
 -   **Fecha:** 2026-10-28.
 -   **Decisión:** k = 5 vecinos más cercanos por distancia de círculo máximo entre puntos interiores de los polígonos más grandes; pesos estandarizados por filas; sensibilidad con k = 3 y k = 8. Los vecinos expresan cercanía, no frontera común.
--   **Evidencia (corrida C, edad mediana 2023 / 2050 / 2100):** Moran I con k = 3: 0.757 / 0.719 / 0.666; k = 5: 0.738 / 0.707 / 0.651; k = 8: 0.732 / 0.707 / 0.653. LISA significativos: k = 3 → 0 / 0 / 0; k = 5 → 72 / 62 / 35; k = 8 → 81 / 82 / 82. El Moran global casi no depende de k; el conteo de LISA sí.
+-   **Evidencia (corrida C, edad mediana 2023 / 2050 / 2100):** Moran I con k = 3: 0.757 / 0.719 / 0.666; k = 5: 0.738 / 0.707 / 0.651; k = 8: 0.732 / 0.707 / 0.653. LISA significativos (semilla fija): k = 3 → 0 / 0 / 0; k = 5 → 72 / 62 / 42; k = 8 → 83 / 82 / 83. El Moran global casi no depende de k; el conteo de LISA sí.
 -   **Alternativa descartada:** contigüidad *queen* (deja islas sin vecinos).
 
 ### D24 · Inferencia espacial
 
 -   **Fecha:** 2026-10-28.
--   **Decisión:** pruebas de permutación bilaterales (999 en Moran global, 199 por año en la serie, **4999 en LISA**); corrección FDR de Benjamini-Hochberg **dentro de cada mapa** (familia = países de una variable-año); no se ajusta entre mapas. Todo se reporta como exploratorio. El valor p mínimo alcanzable es 2 / (permutaciones + 1). Desde la corrida D, cada llamada de LISA lleva su semilla y el conteo de significativos se reporta como **rango** con la estabilidad Monte Carlo (3 semillas).
--   **Evidencia:** con k = 3 no hay ningún LISA significativo ni con 4999 permutaciones: es falta de potencia (el promedio de solo tres vecinos varía mucho y BH exige valores p pequeños), no el piso del valor p. En 2100 con k = 5 la corrida principal dio 48 significativos y la tabla de sensibilidad 35, con las mismas entradas: el conteo depende del azar. El Moran propio coincide con `spdep::moran.test` (0.7379).
+-   **Decisión:** pruebas de permutación bilaterales (999 en Moran global, 199 por año en la serie, **4999 en LISA**); corrección FDR de Benjamini-Hochberg **dentro de cada mapa** (familia = países de una variable-año); no se ajusta entre mapas. Todo se reporta como exploratorio. El valor p mínimo alcanzable es 2 / (permutaciones + 1). Cada llamada de LISA lleva su semilla (corrida D) y el conteo de significativos se reporta como **rango** con la estabilidad Monte Carlo (3 semillas).
+-   **Evidencia:** con k = 3 no hay ningún LISA significativo ni con 4999 permutaciones: es falta de potencia (el promedio de solo tres vecinos varía mucho y BH exige valores p pequeños), no el piso del valor p. En la corrida C, en 2100 con k = 5, la corrida principal dio 48 significativos y la tabla de sensibilidad 35, con las mismas entradas. **Corrida D (3 semillas): 2023 → 72 a 73; 2050 → 61 a 62; 2100 → 37 a 49**: el conteo de 2100 depende del azar y se reporta como rango. El Moran propio coincide con `spdep::moran.test` (0.7379).
 -   **Alternativas descartadas:** valores p analíticos (supuesto de normalidad débil con n = 161); ajuste conjunto entre todos los mapas (queda como sensibilidad opcional).
 
 ### D25 · Empalme del DANE en 2017/2018
@@ -385,6 +385,7 @@ Las edades de jubilación vigentes en Colombia (57 mujeres y 62 hombres, según 
 -   **Interpretación pendiente:** las causas (base censal de 2018, tratamiento de la migración) deben confirmarse con la metodología del DANE; no se asumen.
 -   **Alternativa descartada:** suavizar o ajustar la serie histórica (inventaría datos).
 -   **Consecuencia:** los años de cruce del PSR (2027 en adelante) no dependen del empalme.
+-   **Observación adicional (figura del script 03, 2026-10-29):** la serie histórica del DANE muestra otra inflexión hacia 1985 y queda muy por debajo de la ONU antes de \~2000 en el soporte 15-64 / 65+. No se investigó; podría estar ligada a la reconstrucción con el censo de ese año (hipótesis sin verificar). Refuerza D27.
 
 ------------------------------------------------------------------------
 

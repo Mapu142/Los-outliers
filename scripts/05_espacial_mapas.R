@@ -77,13 +77,13 @@ datos_anios <- datos_pais |> filter(Time %in% ANIOS_MAPA) |>
 m_anios <- inner_join(mundo_p, datos_anios, by = "iso3")
 
 p1 <- mapa_coropletico(mundo_p, m_anios, "edad_mediana", "Edad mediana (años)",
-                       "El envejecimiento avanza, pero no al mismo ritmo en todo el mundo",
+                       "El envejecimiento avanza a ritmos distintos",
                        "Edad mediana de la población, 237 países y áreas.",
                        CAP, resaltar = col_p, facetas = "panel", etiquetas = fmt_num(1))
 print(p1); guardar_fig(p1, "05_mapa_edad_mediana", ancho = 8, alto = 13.5)
 
 p2 <- mapa_coropletico(mundo_p, m_anios, "tfr", "Hijos por mujer (TFR)",
-                       "La fecundidad converge hacia el nivel de reemplazo o por debajo",
+                       "La fecundidad converge hacia el reemplazo o menos",
                        paste0("Nivel de reemplazo = ", format(CFG$tfr_reemplazo, decimal.mark = CFG$sep_decimal),
                               " hijos por mujer."),
                        CAP, resaltar = col_p, facetas = "panel", etiquetas = fmt_num(0.1))

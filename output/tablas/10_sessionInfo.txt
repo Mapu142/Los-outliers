@@ -1,0 +1,46 @@
+R version 4.4.3 (2025-02-28 ucrt)
+Platform: x86_64-w64-mingw32/x64
+Running under: Windows 11 x64 (build 26200)
+
+Matrix products: default
+
+
+locale:
+[1] LC_COLLATE=English_United States.utf8  LC_CTYPE=English_United States.utf8    LC_MONETARY=English_United States.utf8
+[4] LC_NUMERIC=C                           LC_TIME=English_United States.utf8    
+
+time zone: America/Bogota
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+ [1] rnaturalearthdata_1.0.0 rnaturalearth_1.2.0     sf_1.0-21               readxl_1.4.5            scales_1.4.0           
+ [6] glue_1.8.0              mgcv_1.9-1              nlme_3.1-167            forecast_8.24.0         duckdb_1.5.2           
+[11] DBI_1.2.3               plotly_4.11.0           bs4Dash_2.3.5           DT_0.33                 ggrepel_0.9.6          
+[16] shiny_1.11.1            countrycode_1.9.0       cluster_2.1.8           factoextra_1.0.7        FactoMineR_2.12        
+[21] arrow_26.0.0            lubridate_1.9.4         forcats_1.0.0           stringr_1.6.0           dplyr_1.2.1            
+[26] purrr_1.2.2             readr_2.1.5             tidyr_1.3.1             tibble_3.2.1            ggplot2_4.0.0          
+[31] tidyverse_2.0.0        
+
+loaded via a namespace (and not attached):
+ [1] sandwich_3.1-1       rlang_1.2.0          magrittr_2.0.3       multcomp_1.4-28      tseries_0.10-58     
+ [6] e1071_1.7-16         compiler_4.4.3       systemfonts_1.2.3    vctrs_0.7.3          quadprog_1.5-8      
+[11] crayon_1.5.3         pkgconfig_2.0.3      fastmap_1.2.0        fontawesome_0.5.3    labeling_0.4.3      
+[16] utf8_1.2.5           promises_1.3.3       tzdb_0.5.0           ragg_1.4.0           bit_4.6.0           
+[21] cachem_1.1.0         jsonlite_2.0.0       flashClust_1.01-2    later_1.4.2          parallel_4.4.3      
+[26] R6_2.6.1             bslib_0.9.0          stringi_1.8.7        RColorBrewer_1.1-3   cellranger_1.1.0    
+[31] lmtest_0.9-40        jquerylib_0.1.4      estimability_1.5.1   Rcpp_1.0.14          assertthat_0.2.1    
+[36] zoo_1.8-14           httpuv_1.6.16        Matrix_1.7-2         splines_4.4.3        nnet_7.3-20         
+[41] timechange_0.3.0     tidyselect_1.2.1     rstudioapi_0.17.1    yaml_2.3.10          timeDate_4041.110   
+[46] codetools_0.2-20     curl_6.4.0           lattice_0.22-7       quantmod_0.4.28      withr_3.0.2         
+[51] S7_0.2.0             urca_1.3-4           coda_0.19-4.1        survival_3.8-3       units_0.8-7         
+[56] proxy_0.4-27         xts_0.14.1           pillar_1.10.2        rsconnect_1.6.2      KernSmooth_2.23-26  
+[61] TTR_0.24.4           generics_0.1.4       vroom_1.6.5          hms_1.1.3            xtable_1.8-4        
+[66] leaps_3.2            class_7.3-23         emmeans_1.11.1       scatterplot3d_0.3-44 lazyeval_0.2.2      
+[71] tools_4.4.3          data.table_1.17.6    mvtnorm_1.3-3        grid_4.4.3           crosstalk_1.2.1     
+[76] colorspace_2.1-1     fracdiff_1.5-3       cli_3.6.5            textshaping_1.0.1    viridisLite_0.4.2   
+[81] gtable_0.3.6         sass_0.4.10          digest_0.6.37        classInt_0.4-11      TH.data_1.1-3       
+[86] htmlwidgets_1.6.4    farver_2.1.2         memoise_2.0.1        htmltools_0.5.8.1    lifecycle_1.0.5     
+[91] httr_1.4.7           multcompView_0.1-10  mime_0.13            bit64_4.6.0-1        MASS_7.3-64         
