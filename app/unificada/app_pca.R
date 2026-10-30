@@ -15,13 +15,14 @@ if (!file.exists("R/config.R")) stop("Ejecute la app desde la raíz del proyecto
 source("R/config.R",           encoding = "UTF-8")
 source("R/utils_datos.R",      encoding = "UTF-8")
 source("R/tema.R",             encoding = "UTF-8")
-source("R/mod_pca_clusters.R", encoding = "UTF-8")
+source("app/unificada/mod_pca_clusters.R", encoding = "UTF-8")
 
 datos_pca <- cargar_datos_pca()
 
-ui <- fluidPage(
-  titlePanel("Trayectorias Fisiológicas del Futuro Global: PCA y estadios demográficos"),
-  mod_pca_ui("pca")
+ui <- navbarPage(
+  "Trayectorias Fisiológicas del Futuro Global",
+  tabPanel("Arquetipos (PCA)", mod_pca_ui("pca")),
+  tabPanel("Transiciones",     mod_transiciones_ui("pca"))
 )
 
 server <- function(input, output, session) {

@@ -5,6 +5,29 @@
 #   shiny::runApp("app/unificada")
 #==============================================================================
 
+#---- Módulo PCA / estadios ---------------------------------------------------
+# Se busca el archivo junto a la app o desde la raíz del proyecto.
+ruta_mod_pca <- c("mod_pca_clusters.R", "app/unificada/mod_pca_clusters.R")
+ruta_mod_pca <- ruta_mod_pca[file.exists(ruta_mod_pca)][1]
+if (is.na(ruta_mod_pca)) stop("No se encontró mod_pca_clusters.R junto a la app.")
+source(ruta_mod_pca, encoding = "UTF-8")
+
+# Si falla la carga, la app sigue abierta y las pestañas muestran un aviso;
+# el motivo queda escrito en la consola de R.
+DATOS_PCA <- tryCatch(
+  cargar_datos_pca(),
+  error = function(e) {
+    message("[PCA] No se pudo cargar el módulo de arquetipos: ", conditionMessage(e))
+    NULL
+  }
+)
+
+aviso_pca <- box(
+  title = "Resultados del PCA no disponibles", width = 12, status = "danger",
+  tags$p("No se pudieron cargar los archivos del PCA y los clústeres.",
+         "El detalle está en la consola de R.")
+)
+
 #---- UI ----------------------------------------------------------------------
 ui <- dashboardPage(
   title       = "Trayectorias del Envejecimiento Global · DataQuest 2026",
@@ -128,13 +151,11 @@ ui <- dashboardPage(
       
       #--- 3. Arquetipos PCA ---
       tabItem(tabName = "pca",
-              box(title = "Arquetipos demográficos (PCA)", width = 12, status = "primary",
-                  tags$p("Próximo paso: integrar aquí ", tags$code("mod_pca_clusters.R")))),
+              if (is.null(DATOS_PCA)) aviso_pca else mod_pca_ui("pca")),
       
       #--- 4. Transiciones ---
       tabItem(tabName = "transiciones",
-              box(title = "Transiciones de estadio", width = 12, status = "primary",
-                  tags$p("Próximo paso: extraer la pestaña 4 de ", tags$code("mod_pca_clusters.R")))),
+              if (is.null(DATOS_PCA)) aviso_pca else mod_transiciones_ui("pca")),
       
       #--- 5. Discrepancias ---
       tabItem(tabName = "discrepancias",
@@ -177,6 +198,9 @@ server <- function(input, output, session) {
   
   # Conectar el módulo de series pasando input directamente
   mod_series_server("series", DATOS_APP, main_input = input)
+  
+  # Módulo PCA / estadios: alimenta las pestañas "Arquetipos (PCA)" y "Transiciones"
+  if (!is.null(DATOS_PCA)) mod_pca_server("pca", datos = DATOS_PCA)
 }
 
 #---- Lanzar app --------------------------------------------------------------
