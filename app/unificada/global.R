@@ -35,15 +35,23 @@ source("R/tema.R",        encoding = "UTF-8")
 DIR_TABLAS <- CFG$dir_tablas
 DIR_CLEAN  <- CFG$dir_clean
 
+.pick <- function(...) { x <- c(...); y <- x[file.exists(x)]; if (length(y)) y[1] else x[1] }
+TS <- "R/time series"   # carpeta donde están los CSV con RS
+
 f <- list(
-  # --- Series de tiempo ---
-  largo        = file.path(DIR_TABLAS, "10_Proyecciones_Propias_vs_ONU_largo.csv"),
-  hist         = file.path(DIR_TABLAS, "10_historico_largo.csv"),
-  valid        = file.path(DIR_TABLAS, "10_validacion_por_pais.csv"),
-  criticos     = file.path(DIR_TABLAS, "10_puntos_criticos_RS.csv"),
+  largo        = .pick(file.path(DIR_TABLAS, "10_Proyecciones_Propias_vs_ONU_largo.csv"),
+                       file.path(TS, "Proyecciones_Propias_vs_ONU_largo.csv")),
+  hist         = .pick(file.path(DIR_TABLAS, "10_historico_largo.csv"),
+                       file.path(TS, "historico_largo.csv")),
+  valid        = .pick(file.path(DIR_TABLAS, "10_validacion_por_pais.csv"),
+                       file.path(TS, "validacion_por_pais.csv")),
+  criticos     = .pick(file.path(DIR_TABLAS, "10_puntos_criticos_RS.csv"),
+                       file.path(DIR_TABLAS, "03_puntos_criticos_RS.csv"),
+                       file.path(TS, "puntos_criticos_RS.csv")),
   d16          = file.path(DIR_TABLAS, "11_d16_posicion_vs_banda80.csv"),
   triang       = file.path(DIR_TABLAS, "11_triangulacion_colombia_rs3.csv"),
-  resumen_disc = file.path(DIR_TABLAS, "10_resumen_discrepancia.csv"),
+  resumen_disc = .pick(file.path(DIR_TABLAS, "10_resumen_discrepancia.csv"),
+                       file.path(TS, "resumen_discrepancia.csv")),
   # --- PCA y arquetipos ---
   pca_coord    = file.path(DIR_CLEAN,  "wpp_pca_coordenadas_todo_periodo.parquet"),
   pca_arq      = file.path(DIR_CLEAN,  "wpp_matriz_arquetipos_proyecciones.parquet"),
@@ -146,8 +154,10 @@ if (is.null(COL_SERIES) || anyNA(COL_SERIES)) {
 }
 
 #---- 6. Módulos --------------------------------------------------------------
-source("app/unificada/modules/mod_pca_clusters.R",               encoding = "UTF-8")
+source("app/unificada/modules/mod_pca_clusters.R",  encoding = "UTF-8")
 source("app/unificada/modules/mod_series.R", encoding = "UTF-8")
+source("app/unificada/modules/mod_discrepancias.R", encoding = "UTF-8")
+source("app/unificada/modules/mod_criticos.R",      encoding = "UTF-8")
 
 #---- 7. Lista de datos para pasar al server ---------------------------------
 DATOS_APP <- list(

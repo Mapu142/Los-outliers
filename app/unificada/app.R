@@ -158,14 +158,10 @@ ui <- dashboardPage(
               if (is.null(DATOS_PCA)) aviso_pca else mod_transiciones_ui("pca")),
       
       #--- 5. Discrepancias ---
-      tabItem(tabName = "discrepancias",
-              box(title = "Discrepancias vs. ONU", width = 12, status = "primary",
-                  tags$p("Próximo paso: migrar la pestaña de discrepancias de ", tags$code("app_ts.R")))),
+      tabItem(tabName = "discrepancias", mod_disc_ui("disc")),
       
       #--- 6. Puntos críticos ---
-      tabItem(tabName = "criticos",
-              box(title = "Puntos críticos (RS < umbral)", width = 12, status = "primary",
-                  tags$p("Próximo paso: migrar la pestaña de puntos críticos + triangulación DANE."))),
+      tabItem(tabName = "criticos", mod_criticos_ui("crit")),
       
       #--- 7. Mapa mundial ---
       tabItem(tabName = "mapa",
@@ -198,6 +194,10 @@ server <- function(input, output, session) {
   
   # Conectar el módulo de series pasando input directamente
   mod_series_server("series", DATOS_APP, main_input = input)
+  
+  # en server <- function(...), junto a mod_series_server:
+  mod_disc_server("disc",      DATOS_APP, main_input = input)
+  mod_criticos_server("crit",  DATOS_APP, main_input = input)
   
   # Módulo PCA / estadios: alimenta las pestañas "Arquetipos (PCA)" y "Transiciones"
   if (!is.null(DATOS_PCA)) mod_pca_server("pca", datos = DATOS_PCA)
