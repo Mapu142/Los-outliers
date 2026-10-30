@@ -159,6 +159,7 @@ source("app/unificada/modules/mod_series.R", encoding = "UTF-8")
 source("app/unificada/modules/mod_discrepancias.R", encoding = "UTF-8")
 source("app/unificada/modules/mod_criticos.R",      encoding = "UTF-8")
 source("app/unificada/modules/mod_mapa.R", encoding = "UTF-8")
+source("app/unificada/modules/mod_validacion.R", encoding = "UTF-8")
 
 #---- 7. Lista de datos para pasar al server ---------------------------------
 DATOS_APP <- list(

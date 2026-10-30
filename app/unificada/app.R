@@ -166,10 +166,8 @@ ui <- dashboardPage(
       #--- 7. Mapa mundial---
       tabItem(tabName = "mapa", mod_mapa_ui("mapa")),
       
-      #--- 8. Validación ---
-      tabItem(tabName = "validacion",
-              box(title = "Validación de modelos (backtesting)", width = 12, status = "primary",
-                  tags$p("Próximo paso: migrar la pestaña de validación de ", tags$code("app_ts.R"))))
+      #--- 8. Validación---
+      tabItem(tabName = "validacion", mod_validacion_ui("validacion"))
     )
   ),
   
@@ -196,6 +194,7 @@ server <- function(input, output, session) {
   mod_disc_server("disc",      DATOS_APP, main_input = input)
   mod_criticos_server("crit",  DATOS_APP, main_input = input)
   mod_mapa_server("mapa", DATOS_APP, main_input = input)
+  mod_validacion_server("validacion", DATOS_APP, main_input = input)
   
   # Módulo PCA / estadios: alimenta las pestañas "Arquetipos (PCA)" y "Transiciones"
   if (!is.null(DATOS_PCA)) mod_pca_server("pca", datos = DATOS_PCA)

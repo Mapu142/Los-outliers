@@ -203,6 +203,20 @@ mod_mapa_server <- function(id, datos, main_input) {
       if (v %in% names(ETIQ_VAR)) ETIQ_VAR[[v]] else v
     }
     
+    observeEvent(input$capa, {
+      todas <- c("Edad mediana" = "MedianAgePop", "Fecundidad (TFR)" = "TFR",
+                 "Esperanza de vida" = "LEx", "Natalidad bruta" = "CBR",
+                 "Esperanza a los 65" = "LE65")
+      if (input$capa == "lisa") {
+        updateSelectInput(session, "variable_lisa",
+                          choices = c("Edad mediana" = "MedianAgePop"),
+                          selected = "MedianAgePop")
+      } else {
+        updateSelectInput(session, "variable_lisa", choices = todas,
+                          selected = isolate(input$variable_lisa))
+      }
+    }, ignoreInit = TRUE)
+    
     #--- 1. Datos del mapa según la capa elegida ---
     datos_mapa <- reactive({
       capa <- input$capa
@@ -271,48 +285,54 @@ mod_mapa_server <- function(id, datos, main_input) {
       
       #--- Capa: LISA ---
       if (capa == "lisa") {
-        if (is.null(datos$lisa_tab) || nrow(datos$lisa_tab) == 0) {
+        if (is.null(datos$lisa_tab) || nrow(datos$lisa_tab) == 0) return(NULL)
+        lisa <- datos$lisa_tab
+        
+        buscar <- function(...) {
+          cand <- tolower(c(...)); nm <- tolower(names(lisa))
+          i <- match(cand, nm); i <- i[!is.na(i)]
+          if (length(i)) names(lisa)[i[1]] else NA_character_
+        }
+        c_iso  <- buscar("iso3", "iso3_code", "iso")
+        c_anio <- buscar("time", "anio", "año", "year")
+        c_var  <- buscar("variable", "var", "indicador")
+        c_grp  <- buscar("grupo", "cuadrante", "cluster", "categoria")
+        
+        if (anyNA(c(c_iso, c_anio, c_var, c_grp))) {
+          message("[LISA] Columnas encontradas: ", paste(names(lisa), collapse = ", "))
           return(NULL)
         }
-        # El archivo 06_lisa_resultados.csv debe tener columnas:
-        # iso3, Time (o anio), Variable, grupo (o cuadrante)
-        lisa <- datos$lisa_tab
-        # Normalizar nombres de columnas (flexible)
-        if ("Time" %in% names(lisa)) {
-          lisa$anio <- lisa$Time
-        }
-        if ("grupo" %in% names(lisa)) {
-          lisa$Grupo <- lisa$grupo
-        }
-        if (!"Grupo" %in% names(lisa) && "cuadrante" %in% names(lisa)) {
-          lisa$Grupo <- lisa$cuadrante
-        }
-        # Mapear variable seleccionada a la que más se acerque en el LISA
-        var_lisa <- dplyr::case_when(
-          v == "MedianAgePop" ~ "edad_mediana",
-          v == "TFR"          ~ "tfr",
-          v == "LEx"          ~ "lex",
-          TRUE                ~ "edad_mediana"
-        )
-        d <- lisa %>%
-          dplyr::filter(
-            tolower(Variable) %in% c(var_lisa, "edad mediana", "tfr", "lex"),
-            anio == !!anio
-          ) %>%
-          dplyr::select(iso3 = iso3, valor = Grupo) %>%
-          dplyr::distinct(iso3, .keep_all = TRUE)
         
-        d$valor <- as.character(d$valor)
-        d$valor[is.na(d$valor)] <- "No significativo"
-        subtitulo <- sprintf(
-          "Grupos LISA · %s (%d) · k = 5, FDR 0.05",
-          etiq_var(v), anio
+        lisa2 <- data.frame(
+          iso3 = as.character(lisa[[c_iso]]), anio = lisa[[c_anio]],
+          var  = tolower(as.character(lisa[[c_var]])),
+          Grupo = as.character(lisa[[c_grp]])
         )
-        return(list(
-          geo = geo, datos = d, subtitulo = subtitulo,
-          tipo_escala = "categorico", es_categorico = TRUE,
-          paleta = paleta_lisa
-        ))
+        syn <- switch(v,
+                      MedianAgePop = c("edad_mediana", "edad mediana", "medianagepop"),
+                      TFR  = "tfr", LEx = "lex", LE60 = "le60", LE65 = "le65",
+                      tolower(v))
+        lsub <- lisa2[lisa2$var %in% syn, ]
+        if (nrow(lsub) == 0) {
+          message("[LISA] Variable '", v, "' no está en el CSV. Disponibles: ",
+                  paste(unique(lisa2$var), collapse = ", "))
+          return(NULL)
+        }
+        anios_ok  <- sort(unique(lsub$anio))
+        anio_lisa <- anios_ok[which.min(abs(anios_ok - anio))]
+        message("[LISA] años disponibles para ", v, ": ", paste(anios_ok, collapse = ", "))
+        
+        d <- lsub %>%
+          dplyr::filter(anio == anio_lisa) %>%
+          dplyr::select(iso3, valor = Grupo) %>%
+          dplyr::distinct(iso3, .keep_all = TRUE)
+        d$valor[is.na(d$valor)] <- "No significativo"
+        
+        subtitulo <- sprintf("Grupos LISA · %s (%d) · k = 5, FDR 0.05",
+                             etiq_var(v), as.integer(anio_lisa))
+        if (anio_lisa != anio) subtitulo <- paste0(subtitulo, " · año LISA más cercano")
+        return(list(geo = geo, datos = d, subtitulo = subtitulo,
+                    tipo_escala = "categorico", es_categorico = TRUE, paleta = paleta_lisa))
       }
       
       #--- Capa: velocidad de envejecimiento ---
@@ -396,31 +416,25 @@ mod_mapa_server <- function(id, datos, main_input) {
       if (isTRUE(d$es_categorico)) {
         # Mapa categórico
         niveles <- names(d$paleta)
-        joined$valor <- factor(joined$valor, levels = niveles)
+        n <- length(niveles)
+        joined$valor <- factor(as.character(joined$valor), levels = niveles)
         z_num <- as.numeric(joined$valor)
         
+        cs <- unlist(lapply(seq_len(n), function(i) list(
+          list((i - 1) / n, unname(d$paleta[i])),
+          list(i / n,       unname(d$paleta[i]))
+        )), recursive = FALSE)
+        
         p <- plotly::plot_ly(
-          joined,
-          type = "choropleth",
-          locations = ~iso3,
-          z = z_num,
-          text = ~paste0(
-            "<b>", Nombre, "</b> (", iso3, ")<br>",
-            "Grupo: ", valor
-          ),
+          sf::st_drop_geometry(joined),
+          type = "choropleth", locations = ~iso3, z = z_num,
+          text = ~paste0("<b>", Nombre, "</b> (", iso3, ")<br>Grupo: ", valor),
           hoverinfo = "text",
-          colorscale = lapply(niveles, function(n) {
-            list(list(0, d$paleta[[n]]))
-          }),
-          # Construir colorscale manual a partir de la paleta
+          colorscale = cs, zmin = 0.5, zmax = n + 0.5,
+          colorbar = list(title = "Grupo", tickvals = seq_len(n),
+                          ticktext = niveles, len = 0.6),
           marker = list(line = list(color = "white", width = 0.3))
-        ) %>%
-          plotly::colorbar(
-            title = list(text = "Grupo", font = list(size = 12)),
-            tickvals = seq_along(niveles),
-            ticktext = niveles,
-            len = 0.6
-          )
+        )
       } else if (d$tipo_escala == "divergente") {
         # Discrepancia: escala divergente simétrica
         rng <- max(abs(range(d$datos$valor, na.rm = TRUE)), na.rm = TRUE)
